@@ -350,6 +350,7 @@ dialog {
 dialog::backdrop { background: rgba(8, 18, 22, 0.5); }
 .dialog-body { display: grid; gap: 1rem; padding: 1.5rem 1.5rem 1rem; }
 .dialog-title { font: 600 1.5rem/1.2 var(--serif); }
+.dialog-title:focus { outline: none; }
 .dialog-text { color: var(--muted); }
 .form-error { min-height: 1.4em; color: var(--neg); font-size: 0.9375rem; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 0.625rem; padding: 0 1.5rem 1.5rem; }
@@ -406,6 +407,82 @@ dialog::backdrop { background: rgba(8, 18, 22, 0.5); }
 .fatal h1 { font: 600 2rem var(--serif); margin-bottom: 1rem; }
 
 /* =============================================================================
+   5b. Modul Vermögen: Kennzahlen, Aufteilung, Bestandstabellen
+   ============================================================================= */
+.page-head.with-actions { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem 1.5rem; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.625rem; }
+.btn-small { min-height: 40px; padding: 0 0.875rem; font-size: 0.9375rem; }
+
+.figures {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--rule);
+}
+.figure { padding: 1rem 1.25rem 1.125rem 0; min-width: 0; }
+.figure + .figure { padding-left: 1.25rem; border-left: 1px solid var(--rule); }
+.figure-label { font-size: 0.9375rem; color: var(--muted); }
+.figure-value { margin-top: 0.25rem; font: 600 1.75rem/1.2 var(--serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.figure-sub { margin-top: 0.125rem; font-size: 0.9375rem; color: var(--muted); }
+
+.is-pos { color: var(--accent); }
+
+.alloc-bar { display: flex; height: 14px; overflow: hidden; border-radius: 7px; background: var(--rule); }
+.alloc-bar span { display: block; height: 100%; }
+.alloc-legend { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; margin-top: 0.75rem; font-size: 0.9375rem; color: var(--muted); }
+.alloc-legend i { display: inline-block; width: 10px; height: 10px; margin-right: 0.4rem; border-radius: 3px; vertical-align: baseline; }
+.alloc-note { margin-top: 0.875rem; max-width: 44rem; }
+
+.depot-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.5rem 1rem; margin: 2.5rem 0 0.75rem; }
+.depot-name { font: 600 1.375rem/1.3 var(--serif); }
+.depot-meta { color: var(--muted); font-size: 0.9375rem; }
+
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-top: 2px solid var(--ink); }
+.ledger-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.ledger-table th {
+  padding: 0.625rem 0.5rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+.ledger-table td { padding: 0.75rem 0.5rem; border-bottom: 1px solid var(--rule); text-align: right; white-space: nowrap; vertical-align: top; }
+.ledger-table th:first-child, .ledger-table td:first-child { padding-left: 0.25rem; text-align: left; }
+.ledger-table tr[data-action] { cursor: pointer; }
+.ledger-table tr[data-action]:active td { background: var(--surface); }
+.sec-name { min-width: 13rem; white-space: normal; font-weight: 500; }
+.sec-meta { margin-top: 0.125rem; color: var(--muted); font-size: 0.8125rem; white-space: nowrap; }
+
+.tag { display: inline-block; padding: 0 0.4rem; border: 1px solid var(--warn-rule); border-radius: 5px; background: var(--warn-bg); color: var(--warn); font-size: 0.75rem; font-weight: 600; vertical-align: 1px; }
+
+/* Dialog-Erweiterungen */
+dialog { max-height: calc(100vh - 2rem); overflow: auto; }
+dialog.dialog-wide { width: min(46rem, calc(100vw - 2rem)); }
+.field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.875rem 1rem; }
+.field-grid .span-2 { grid-column: 1 / -1; }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem 1rem; padding: 0.75rem 0; border-top: 2px solid var(--ink); border-bottom: 1px solid var(--rule); }
+.facts dt { color: var(--muted); font-size: 0.875rem; }
+.facts dd { margin: 0.125rem 0 0; font-weight: 600; }
+.tx-table input { min-height: 40px; width: 7.5rem; text-align: right; }
+.tx-table td { vertical-align: middle; }
+.import-depot { padding: 0.75rem 0; border-top: 1px solid var(--rule); display: grid; gap: 0.5rem; }
+.import-title { font: 600 1.125rem var(--serif); }
+.import-changes { margin: 0; padding-left: 1.25rem; color: var(--muted); font-size: 0.9375rem; }
+
+@media (max-width: 920px) {
+  .figures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .figure:nth-child(3) { border-left: 0; padding-left: 0; }
+  .figure:nth-child(n+3) { border-top: 1px solid var(--rule); }
+  .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sec-name { min-width: 9rem; }
+}
+@media (max-width: 640px) {
+  .field-grid { grid-template-columns: 1fr; }
+}
+
+/* =============================================================================
    6. Hochformat und schmale Fenster (Split View): Leiste nur mit Symbolen
    ============================================================================= */
 @media (max-width: 920px) {
@@ -456,7 +533,7 @@ dialog::backdrop { background: rgba(8, 18, 22, 0.5); }
 /* =============================================================================
    0. KONFIGURATION
    ============================================================================= */
-const APP_VERSION = '0.1.0';
+const APP_VERSION = '0.2.0';
 const DB_NAME = 'finanzcockpit';
 const DB_VERSION = 1;                 // bei Schema-Änderungen erhöhen + MIGRATIONS ergänzen
 const PBKDF2_ITERATIONS = 600000;     // Rechenaufwand pro PIN-Prüfung (Schutz gegen Durchprobieren)
@@ -778,12 +855,12 @@ const UI = {
    * Dialog mit Formular. Gibt die Formularwerte zurück oder null bei Abbruch.
    * validate(data) darf async sein und gibt einen Fehlertext oder null zurück.
    */
-  form({ title, html = '', submitLabel = 'OK', cancelLabel = 'Abbrechen', danger = false, validate = null }) {
+  form({ title, html = '', submitLabel = 'OK', cancelLabel = 'Abbrechen', danger = false, validate = null, wide = false, onOpen = null }) {
     const dlg = $('#dialog');
     dlg.innerHTML = `
       <form class="dialog-form" novalidate>
         <div class="dialog-body">
-          <h2 class="dialog-title">${esc(title)}</h2>
+          <h2 class="dialog-title" ${wide ? 'tabindex="-1" autofocus' : ''}>${esc(title)}</h2>
           ${html}
           <p class="form-error" role="alert"></p>
         </div>
@@ -792,6 +869,7 @@ const UI = {
           <button type="submit" class="${danger ? 'btn-danger-solid' : 'btn-primary'}">${esc(submitLabel)}</button>
         </div>
       </form>`;
+    dlg.classList.toggle('dialog-wide', wide);
     const form = $('form', dlg);
     const submit = $('button[type="submit"]', form);
 
@@ -817,7 +895,9 @@ const UI = {
       $('[data-dialog-cancel]', form)?.addEventListener('click', () => finish(null));
       dlg.oncancel = (event) => { event.preventDefault(); finish(null); };   // Escape-Taste
       dlg.showModal();
-      setTimeout(() => $('input:not([type="checkbox"])', form)?.focus(), 60);
+      if (onOpen) onOpen(form);
+      // Große Dialoge nicht automatisch fokussieren, sonst verdeckt die Tastatur den Inhalt
+      if (!wide) setTimeout(() => $('input:not([type="checkbox"])', form)?.focus(), 60);
     });
   },
 
@@ -1273,7 +1353,8 @@ const Pages = {
       Settings.get('lastBackupAt'), Settings.get('backupReminderDays', 14), Claude.hasKey(),
     ]);
     const backup = Backup.status(lastBackupAt, reminderDays);
-    const ctx = { hasKey };
+    const pf = await Portfolio.load();
+    const ctx = { hasKey, depotValue: pf.depots.length ? Portfolio.summarize(pf).valueCents : null };
 
     view.innerHTML = `
       <div class="page">
@@ -1465,16 +1546,723 @@ const Pages = {
   },
 };
 
+/* =============================================================================
+   8b. MODUL B · VERMÖGEN (Depots)
+   Bestände werden nie direkt gespeichert, sondern aus den Buchungen in
+   investmentTransactions berechnet (Durchschnittskosten-Methode).
+   Kurse kommen aus dem DKB-Export oder aus der letzten Buchung.
+   ============================================================================= */
+
+/** Zahlen: deutsche Schreibweise lesen, als ganze Zahlen rechnen. */
+const Num = {
+  /**
+   * "1.234,5678 €" -> ganze Zahl mit `scale` Nachkommastellen (gerundet).
+   * Versteht Komma und Punkt als Dezimalzeichen. Gibt null zurück, wenn unlesbar.
+   */
+  parse(raw, scale) {
+    let s = String(raw ?? '').replace(/[€%\s\u00a0]/g, '');
+    if (!s) return null;
+    let negative = false;
+    if (s[0] === '-' || s[0] === '+') { negative = s[0] === '-'; s = s.slice(1); }
+    let intPart = s;
+    let frac = '';
+    if (s.includes(',')) {
+      const i = s.lastIndexOf(',');
+      intPart = s.slice(0, i).replace(/\./g, '');
+      frac = s.slice(i + 1);
+    } else if (/^\d{1,3}(\.\d{3})+$/.test(s)) {
+      intPart = s.replace(/\./g, '');          // 1.234 = eintausendzweihundertvierunddreißig
+    } else if (s.includes('.')) {
+      const i = s.lastIndexOf('.');
+      intPart = s.slice(0, i).replace(/\./g, '');
+      frac = s.slice(i + 1);
+    }
+    if (!/^\d*$/.test(intPart) || !/^\d*$/.test(frac) || (!intPart && !frac)) return null;
+    const digits = (frac + '0'.repeat(scale + 1)).slice(0, scale + 1);
+    let n = Number((intPart || '0') + digits.slice(0, scale));
+    if (Number(digits[scale]) >= 5) n += 1;
+    return negative ? -n : n;
+  },
+  fixed(value, scale, min, max) {
+    return (value / 10 ** scale).toLocaleString('de-DE', { minimumFractionDigits: min, maximumFractionDigits: max });
+  },
+  price(e4) { return `${Num.fixed(e4, 4, 2, 4)} €`; },
+  priceShort(e4) { return `${Num.fixed(e4, 4, 2, Math.abs(e4) >= 100000 ? 2 : 4)} €`; },
+  qty(e6) { return Num.fixed(e6, 6, 0, 6); },
+  input(value, scale, min = 2) { return value == null ? '' : Num.fixed(value, scale, min, scale).replace(/\./g, ''); },
+  valueCents(qtyE6, priceE4) { return Math.round((qtyE6 * priceE4) / 1e8); },
+  pct(value) { return `${value.toLocaleString('de-DE', { maximumFractionDigits: 1 })} %`; },
+  signedCents(c) { return `${c > 0 ? '+' : ''}${fmt.cents(c)}`; },
+  signedPct(value) { return `${value > 0 ? '+' : ''}${Num.pct(value)}`; },
+  cls(v) { return v > 0 ? 'is-pos' : v < 0 ? 'is-neg' : ''; },
+};
+
+/** CSV lesen: Kodierung und Trennzeichen werden erkannt, Anführungszeichen beachtet. */
+const CSV = {
+  async readText(file) {
+    const buf = await file.arrayBuffer();
+    let text = new TextDecoder('utf-8').decode(buf);
+    if (text.includes('\uFFFD')) text = new TextDecoder('windows-1252').decode(buf);   // ältere Exporte
+    return text.replace(/^\uFEFF/, '');
+  },
+  parse(text) {
+    const first = text.split(/\r?\n/, 1)[0];
+    const delim = [';', '\t', ','].map((d) => [d, first.split(d).length]).sort((a, b) => b[1] - a[1])[0][0];
+    const rows = [];
+    let row = [];
+    let field = '';
+    let quoted = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (quoted) {
+        if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else quoted = false; }
+        else field += c;
+      } else if (c === '"') quoted = true;
+      else if (c === delim) { row.push(field); field = ''; }
+      else if (c === '\n' || c === '\r') {
+        if (c === '\r' && text[i + 1] === '\n') i++;
+        row.push(field); rows.push(row); row = []; field = '';
+      } else field += c;
+    }
+    if (field !== '' || row.length) { row.push(field); rows.push(row); }
+    return rows.filter((r) => r.some((f) => f.trim() !== ''));
+  },
+};
+
+// Importprofil DKB-Depotexport (Spaltennamen genau wie in der Datei).
+// Weitere Banken: weiteres Profil nach diesem Muster ergänzen.
+const DKB_DEPOT_PROFILE = {
+  id: 'dkb-depot',
+  label: 'DKB-Depotexport',
+  columns: {
+    date: 'Datum der Erstellung', depot: 'Depotnummer', name: 'Wertpapierbezeichnung', wkn: 'WKN', isin: 'ISIN',
+    entry: 'Einstiegskurs', price: 'Bewertungskurs', qty: 'Stückzahl', assetClass: 'Assetklasse',
+  },
+  required: ['depot', 'isin', 'entry', 'price', 'qty'],
+};
+
+const ASSET_CLASS_MAP = { etfs: 'etf', etf: 'etf', aktien: 'stock', aktie: 'stock', fonds: 'fund', anleihen: 'bond', derivate: 'derivative', zertifikate: 'derivative' };
+const SECURITY_TYPES = { etf: 'ETF', stock: 'Aktie', fund: 'Fonds', bond: 'Anleihe', derivative: 'Derivat', other: 'Sonstiges' };
+const SECURITY_COLORS = { etf: 'var(--accent)', stock: '#3f7aa6', fund: '#7a6fb0', bond: '#8a8f5a', derivative: 'var(--warn)', other: 'var(--muted)' };
+const FUND_TAX_CLASSES = { equity: 'Aktienfonds', mixed: 'Mischfonds', real_estate: 'Immobilienfonds', other: 'Sonstiger Fonds' };
+const TX_TYPES = { opening: 'Anfangsbestand', buy: 'Kauf', savings_plan: 'Sparplan', sell: 'Verkauf', distribution: 'Ausschüttung' };
+const BUY_TYPES = ['opening', 'buy', 'savings_plan'];
+const FEE_RULE_TYPES = ['buy', 'savings_plan', 'sell'];
+const CLUSTER_WARN_PCT = 25;   // ab diesem Anteil einer Position im Depot gilt sie als Klumpen
+
+const Portfolio = {
+  /** Lädt Depots, Wertpapiere, Buchungen und Kurse und berechnet alle Positionen. */
+  async load() {
+    const data = await DB.readAll(['accounts', 'securities', 'investmentTransactions', 'securityPrices']);
+    const depots = data.accounts.filter((a) => a.accountType === 'depot').sort((a, b) => a.name.localeCompare(b.name, 'de'));
+    const securities = new Map(data.securities.map((s) => [s.id, s]));
+    const txs = data.investmentTransactions.slice().sort((a, b) => `${a.tradeDate}${a.createdAt}`.localeCompare(`${b.tradeDate}${b.createdAt}`));
+
+    // Aktuellster Kurs je Wertpapier: gespeicherter Kurs oder jüngere Buchung
+    const latest = new Map();
+    for (const p of data.securityPrices) {
+      const cur = latest.get(p.securityId);
+      if (!cur || p.date > cur.date) latest.set(p.securityId, p);
+    }
+    for (const t of txs) {
+      const cur = latest.get(t.securityId);
+      if (t.priceE4 && (!cur || t.tradeDate > cur.date)) latest.set(t.securityId, { date: t.tradeDate, priceE4: t.priceE4, source: 'tx' });
+    }
+
+    const positions = new Map();
+    for (const t of txs) {
+      const key = `${t.accountId}|${t.securityId}`;
+      const p = positions.get(key) || { key, accountId: t.accountId, securityId: t.securityId, qtyE6: 0, costCents: 0, realizedCents: 0, feesCents: 0, incomeCents: 0, txs: [] };
+      const fees = t.feesCents || 0;
+      p.txs.push(t);
+      p.feesCents += fees;
+      if (BUY_TYPES.includes(t.txType)) {
+        p.costCents += (t.quantityE6 * t.priceE4) / 1e8 + fees;   // Gebühren erhöhen den Einstand
+        p.qtyE6 += t.quantityE6;
+      } else if (t.txType === 'sell') {
+        const q = Math.min(t.quantityE6, p.qtyE6);
+        const avg = p.qtyE6 ? p.costCents / p.qtyE6 : 0;
+        p.realizedCents += (q * t.priceE4) / 1e8 - fees - (t.taxesCents || 0) - avg * q;
+        p.costCents -= avg * q;
+        p.qtyE6 -= q;
+      } else if (t.txType === 'distribution') {
+        p.incomeCents += (t.amountCents || 0) - (t.taxesCents || 0);
+      }
+      positions.set(key, p);
+    }
+
+    for (const p of positions.values()) {
+      const price = latest.get(p.securityId);
+      p.priceE4 = price ? price.priceE4 : (p.qtyE6 ? Math.round((p.costCents * 1e8) / p.qtyE6) : 0);
+      p.priceDate = price ? price.date : null;
+      p.costCents = Math.round(p.costCents);
+      p.avgE4 = p.qtyE6 ? Math.round((p.costCents * 1e8) / p.qtyE6) : 0;
+      p.valueCents = Num.valueCents(p.qtyE6, p.priceE4);
+      p.gainCents = p.valueCents - p.costCents;
+      p.gainPct = p.costCents ? (p.gainCents / p.costCents) * 100 : 0;
+    }
+    return { depots, securities, txs, positions, latest };
+  },
+
+  /** Kennzahlen über alle Depots. */
+  summarize(pf) {
+    const open = [...pf.positions.values()].filter((p) => p.qtyE6 > 0);
+    const year = String(new Date().getFullYear());
+    const s = { open, valueCents: 0, costCents: 0, gainCents: 0, terCents: 0, byType: {}, bySecurity: new Map(), priceDate: null,
+      feesYearCents: pf.txs.filter((t) => t.tradeDate.startsWith(year)).reduce((sum, t) => sum + (t.feesCents || 0), 0), year };
+    for (const p of open) {
+      const sec = pf.securities.get(p.securityId);
+      s.valueCents += p.valueCents;
+      s.costCents += p.costCents;
+      s.byType[sec.securityType] = (s.byType[sec.securityType] || 0) + p.valueCents;
+      s.bySecurity.set(sec.id, (s.bySecurity.get(sec.id) || 0) + p.valueCents);
+      if (sec.ter) s.terCents += Math.round((p.valueCents * sec.ter) / 100);
+      if (p.priceDate && (!s.priceDate || p.priceDate > s.priceDate)) s.priceDate = p.priceDate;
+    }
+    s.gainCents = s.valueCents - s.costCents;
+    s.gainPct = s.costCents ? (s.gainCents / s.costCents) * 100 : 0;
+    s.top = [...s.bySecurity.entries()].sort((a, b) => b[1] - a[1]).map(([id, v]) => ({ security: pf.securities.get(id), valueCents: v, pct: s.valueCents ? (v / s.valueCents) * 100 : 0 }));
+    return s;
+  },
+
+  /** Gebühr nach dem hinterlegten Preismodell des Depots. */
+  feeFor(account, txType, valueCents) {
+    const rule = (account?.feeRules || []).find((r) => r.txType === txType);
+    if (!rule) return 0;
+    let fee = (rule.fixedCents || 0) + Math.round((valueCents * (rule.pct || 0)) / 100);
+    if (rule.minCents) fee = Math.max(fee, rule.minCents);
+    if (rule.maxCents) fee = Math.min(fee, rule.maxCents);
+    return fee;
+  },
+};
+
+/**
+ * Import des DKB-Depotexports (Bestandsliste).
+ * Erster Import: je Position ein Anfangsbestand zum DKB-Einstiegskurs.
+ * Spätere Importe: Kurse aktualisieren und Stückzahl-Änderungen als Kauf
+ * oder Verkauf buchen. Den Kaufkurs leitet die App aus der Änderung des
+ * DKB-Einstiegskurses ab; was sich nicht genau bestimmen lässt, wird als
+ * „geschätzt“ markiert und kann in der Position korrigiert werden.
+ */
+const DepotImport = {
+  async start(file) {
+    let rows;
+    try { rows = CSV.parse(await CSV.readText(file)); } catch (_) { rows = []; }
+    const header = (rows[0] || []).map((h) => h.trim().toLowerCase());
+    const col = {};
+    for (const [k, name] of Object.entries(DKB_DEPOT_PROFILE.columns)) col[k] = header.indexOf(name.toLowerCase());
+    if (DKB_DEPOT_PROFILE.required.some((k) => col[k] < 0)) {
+      UI.toast('Diese Datei sieht nicht wie ein DKB-Depotexport aus.', { error: true });
+      return;
+    }
+
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const fileHash = b64.fromBytes(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)));
+    const duplicate = await DB.byIndex('importBatches', 'fileHash', fileHash);
+    if (duplicate.length) {
+      UI.toast(`Diese Datei wurde am ${fmt.date(duplicate[0].importedAt)} schon importiert.`, { error: true });
+      return;
+    }
+
+    const items = [];
+    const skipped = [];
+    rows.slice(1).forEach((r, i) => {
+      const get = (k) => (col[k] >= 0 ? (r[col[k]] || '').trim() : '');
+      const item = {
+        depot: get('depot'), isin: get('isin').toUpperCase(), wkn: get('wkn'), name: get('name'),
+        type: ASSET_CLASS_MAP[get('assetClass').toLowerCase()] || 'other', date: DepotImport.isoDate(get('date')),
+        entryE4: Num.parse(get('entry'), 4), priceE4: Num.parse(get('price'), 4), qtyE6: Num.parse(get('qty'), 6),
+      };
+      const valid = /^[A-Z]{2}[A-Z0-9]{9}\d$/.test(item.isin) && item.depot && item.qtyE6 > 0 && item.priceE4 != null && item.entryE4 != null;
+      if (valid) items.push(item); else skipped.push(i + 2);
+    });
+    if (!items.length) { UI.toast('In der Datei wurden keine lesbaren Positionen gefunden.', { error: true }); return; }
+
+    const plan = await DepotImport.plan(items);
+    if (!(await DepotImport.preview(plan, skipped))) return;
+    await DepotImport.apply(plan, { fileHash, fileName: file.name, rowCount: items.length });
+  },
+
+  isoDate(s) {
+    const m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(s);
+    return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : todayIso();
+  },
+
+  lastSnapshot(batches, accountId) {
+    const withSnap = batches.filter((b) => b.snapshots?.[accountId]).sort((a, b) => `${b.exportDate}${b.importedAt}`.localeCompare(`${a.exportDate}${a.importedAt}`));
+    return withSnap[0]?.snapshots[accountId] || null;
+  },
+
+  async plan(items) {
+    const pf = await Portfolio.load();
+    const batches = await DB.getAll('importBatches');
+    const accounts = await DB.getAll('accounts');
+    const byIsin = new Map([...pf.securities.values()].map((s) => [s.isin, s]));
+    const plan = { depots: [], newSecurities: new Map(), prices: [], date: items[0].date };
+
+    const groups = new Map();
+    for (const it of items) { if (!groups.has(it.depot)) groups.set(it.depot, []); groups.get(it.depot).push(it); }
+
+    for (const [depotNumber, rows] of groups) {
+      const account = accounts.find((a) => a.accountType === 'depot' && a.depotNumber === depotNumber) || null;
+      const accountId = account ? account.id : crypto.randomUUID();
+      const firstImport = !account || !pf.txs.some((t) => t.accountId === account.id);
+      const snapshot = account ? DepotImport.lastSnapshot(batches, account.id) : null;
+      const current = new Map();
+      if (account) for (const p of pf.positions.values()) if (p.accountId === account.id && p.qtyE6 > 0) current.set(pf.securities.get(p.securityId).isin, p);
+
+      const txs = [];
+      const changes = [];
+      const tx = (fields) => ({ id: crypto.randomUUID(), accountId, feesCents: 0, taxesCents: 0, source: 'dkb-import', createdAt: nowIso(), ...fields });
+
+      for (const r of rows) {
+        let sec = byIsin.get(r.isin) || plan.newSecurities.get(r.isin);
+        if (!sec) {
+          sec = { id: crypto.randomUUID(), isin: r.isin, wkn: r.wkn, name: r.name, securityType: r.type, ter: null, fundTaxClass: null, priceSymbol: null, exposures: [], createdAt: nowIso(), updatedAt: nowIso() };
+          plan.newSecurities.set(r.isin, sec);
+        }
+        plan.prices.push({ id: `${sec.id}:${r.date}`, securityId: sec.id, date: r.date, priceE4: r.priceE4, source: 'dkb-csv' });
+
+        const cur = current.get(r.isin);
+        current.delete(r.isin);
+        const oldQty = cur ? cur.qtyE6 : 0;
+        const dq = r.qtyE6 - oldQty;
+        if (dq === 0) continue;
+
+        if (firstImport) {
+          txs.push(tx({ securityId: sec.id, txType: 'opening', tradeDate: r.date, quantityE6: r.qtyE6, priceE4: r.entryE4, estimated: false }));
+          changes.push(`${r.name}: Anfangsbestand ${Num.qty(r.qtyE6)} Stück`);
+        } else if (dq > 0) {
+          // Kaufkurs aus der Veränderung des DKB-Einstiegskurses ableiten
+          const prev = snapshot?.[r.isin];
+          let priceE4 = r.priceE4;
+          let exact = false;
+          if (!cur) { priceE4 = r.entryE4; exact = true; }
+          else if (prev) {
+            const derived = Math.round((r.qtyE6 * r.entryE4 - prev.qtyE6 * prev.entryE4) / dq);
+            if (derived > 0) { priceE4 = derived; exact = true; }
+          }
+          txs.push(tx({ securityId: sec.id, txType: 'buy', tradeDate: r.date, quantityE6: dq, priceE4, estimated: true }));
+          changes.push(`${r.name}: Kauf ${Num.qty(dq)} Stück zu ${Num.price(priceE4)}${exact ? '' : ' (Kurs geschätzt)'}`);
+        } else {
+          txs.push(tx({ securityId: sec.id, txType: 'sell', tradeDate: r.date, quantityE6: -dq, priceE4: r.priceE4, estimated: true }));
+          changes.push(`${r.name}: Verkauf ${Num.qty(-dq)} Stück zu ${Num.price(r.priceE4)} (Kurs geschätzt)`);
+        }
+      }
+      // Positionen, die nicht mehr in der Datei stehen, wurden verkauft
+      for (const [, p] of current) {
+        const sec = pf.securities.get(p.securityId);
+        txs.push(tx({ securityId: sec.id, txType: 'sell', tradeDate: plan.date, quantityE6: p.qtyE6, priceE4: p.priceE4, estimated: true }));
+        changes.push(`${sec.name}: nicht mehr im Depot, Verkauf ${Num.qty(p.qtyE6)} Stück (Kurs geschätzt)`);
+      }
+
+      plan.depots.push({
+        depotNumber, account, accountId, isNew: !account, rows, txs, changes,
+        name: account ? account.name : `DKB-Depot …${depotNumber.slice(-4)}`,
+        snapshot: Object.fromEntries(rows.map((r) => [r.isin, { qtyE6: r.qtyE6, entryE4: r.entryE4, priceE4: r.priceE4 }])),
+      });
+    }
+    return plan;
+  },
+
+  async preview(plan, skipped) {
+    const blocks = plan.depots.map((d, i) => `
+      <div class="import-depot">
+        ${d.isNew
+          ? `<div class="field"><label for="imp-name-${i}">Name für das neue Depot (Nummer endet auf ${esc(d.depotNumber.slice(-4))})</label><input id="imp-name-${i}" name="name${i}" value="${esc(d.name)}"></div>`
+          : `<p class="import-title">${esc(d.name)}</p>`}
+        <p class="dialog-text">${d.rows.length} Positionen mit Kursen vom ${esc(fmt.date(plan.date))}. ${d.changes.length ? `${d.changes.length} Änderungen am Bestand:` : 'Der Bestand ist unverändert, es werden nur die Kurse aktualisiert.'}</p>
+        ${d.changes.length ? `<ul class="import-changes">${d.changes.slice(0, 8).map((c) => `<li>${esc(c)}</li>`).join('')}${d.changes.length > 8 ? `<li>und ${d.changes.length - 8} weitere</li>` : ''}</ul>` : ''}
+      </div>`).join('');
+    const estimated = plan.depots.some((d) => d.txs.some((t) => t.estimated));
+    const html = blocks
+      + (estimated ? '<p class="dialog-text">Der genaue Tag und die Gebühren stehen nicht im Export. Du kannst beides später in der Position aus der Abrechnung nachtragen.</p>' : '')
+      + (skipped.length ? `<p class="dialog-text is-warn">${skipped.length} Zeile(n) ließen sich nicht lesen und werden übersprungen: Zeile ${skipped.slice(0, 6).join(', ')}.</p>` : '');
+    const result = await UI.form({ title: 'DKB-Export importieren', html, submitLabel: 'Importieren', wide: true });
+    if (!result) return false;
+    plan.depots.forEach((d, i) => { if (d.isNew) d.name = (result[`name${i}`] || '').trim() || d.name; });
+    return true;
+  },
+
+  async apply(plan, { fileHash, fileName, rowCount }) {
+    const batchId = crypto.randomUUID();
+    const now = nowIso();
+    await DB.write(['accounts', 'securities', 'securityPrices', 'investmentTransactions', 'importBatches'], (s) => {
+      for (const d of plan.depots) {
+        if (d.isNew) s.accounts.put({ id: d.accountId, name: d.name, institution: 'DKB', accountType: 'depot', depotNumber: d.depotNumber, feeRules: [], createdAt: now, updatedAt: now });
+      }
+      for (const sec of plan.newSecurities.values()) s.securities.put(sec);
+      for (const p of plan.prices) s.securityPrices.put(p);
+      for (const d of plan.depots) for (const t of d.txs) s.investmentTransactions.put({ ...t, importBatchId: batchId });
+      s.importBatches.put({
+        id: batchId, profile: DKB_DEPOT_PROFILE.id, fileHash, fileName, rowCount, importedAt: now, exportDate: plan.date,
+        snapshots: Object.fromEntries(plan.depots.map((d) => [d.accountId, d.snapshot])),
+      });
+    });
+    const changed = plan.depots.reduce((n, d) => n + d.txs.length, 0);
+    UI.toast(changed ? `Importiert: ${changed} Buchungen, Kurse aktualisiert` : 'Kurse aktualisiert');
+    App.render();
+  },
+};
+
+const Wealth = {
+  // ----- Seite -----------------------------------------------------------------
+  async render(view) {
+    const pf = await Portfolio.load();
+    const s = Portfolio.summarize(pf);
+
+    const head = `
+      <header class="page-head with-actions">
+        <div>
+          <h1 class="page-title">Vermögen</h1>
+          <p class="page-sub">${s.priceDate ? `Kurse vom ${esc(fmt.date(s.priceDate))}. Für neue Kurse den DKB-Export erneut importieren.` : 'Importiere deinen DKB-Depotexport oder erfasse Positionen von Hand.'}</p>
+        </div>
+        <div class="actions">
+          <label class="btn btn-primary">DKB-Export importieren<input class="file-input" type="file" accept=".csv,text/csv,text/comma-separated-values,text/plain" data-change="wealth-import"></label>
+          <button type="button" data-action="wealth-tx-add">Buchung erfassen</button>
+        </div>
+      </header>`;
+
+    if (!pf.depots.length) {
+      view.innerHTML = `<div class="page">${head}
+        <div class="empty">
+          <p class="empty-title">Noch kein Depot angelegt.</p>
+          <ul class="empty-list">
+            <li>Im DKB-Banking den Depotbestand als CSV exportieren und hier importieren. Ein Export pro Depot.</li>
+            <li>Oder über „Buchung erfassen“ ein Depot anlegen und jede Position als Anfangsbestand eintragen.</li>
+          </ul>
+        </div></div>`;
+      return;
+    }
+
+    const types = Object.entries(s.byType).sort((a, b) => b[1] - a[1]);
+    const top = s.top[0];
+    const top3 = s.top.slice(0, 3).reduce((sum, t) => sum + t.pct, 0);
+    const cluster = top && top.pct >= CLUSTER_WARN_PCT
+      ? `<p class="alloc-note"><strong class="is-warn">Klumpen:</strong> ${esc(top.security.name)} macht ${Num.pct(top.pct)} deines Depotwerts aus. Die drei größten Positionen zusammen ${Num.pct(top3)}.</p>`
+      : (top ? `<p class="alloc-note">Größte Position: ${esc(top.security.name)} mit ${Num.pct(top.pct)}. Die drei größten zusammen ${Num.pct(top3)}.</p>` : '');
+
+    view.innerHTML = `
+      <div class="page">
+        ${head}
+        <section class="section">
+          <div class="figures">
+            <div class="figure"><div class="figure-label">Depotwert</div><div class="figure-value">${esc(fmt.cents(s.valueCents))}</div><div class="figure-sub">${s.open.length} Positionen in ${pf.depots.length} ${pf.depots.length === 1 ? 'Depot' : 'Depots'}</div></div>
+            <div class="figure"><div class="figure-label">Einstand</div><div class="figure-value">${esc(fmt.cents(s.costCents))}</div><div class="figure-sub">inklusive erfasster Gebühren</div></div>
+            <div class="figure"><div class="figure-label">Kursgewinn</div><div class="figure-value ${Num.cls(s.gainCents)}">${esc(Num.signedCents(s.gainCents))}</div><div class="figure-sub ${Num.cls(s.gainCents)}">${esc(Num.signedPct(s.gainPct))}</div></div>
+            <div class="figure"><div class="figure-label">Gebühren ${esc(s.year)}</div><div class="figure-value">${esc(fmt.cents(s.feesYearCents))}</div><div class="figure-sub">${s.terCents ? `dazu ca. ${esc(fmt.cents(s.terCents))} TER im Jahr` : 'TER je Position ergänzen'}</div></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2 class="section-title">Aufteilung</h2>
+          <div class="alloc-bar" role="img" aria-label="Aufteilung nach Art">${types.map(([t, v]) => `<span style="width:${((v / s.valueCents) * 100).toFixed(2)}%;background:${SECURITY_COLORS[t] || SECURITY_COLORS.other}"></span>`).join('')}</div>
+          <div class="alloc-legend">${types.map(([t, v]) => `<span><i style="background:${SECURITY_COLORS[t] || SECURITY_COLORS.other}"></i>${esc(SECURITY_TYPES[t] || t)} ${Num.pct((v / s.valueCents) * 100)}</span>`).join('')}</div>
+          ${cluster}
+        </section>
+
+        ${pf.depots.map((d) => Wealth.depotTable(d, pf)).join('')}
+
+        <section class="section">
+          <p class="note">Konten und dein monatlicher Cashflow mit Gehalt, Fixkosten und Sparrate folgen im nächsten Bauschritt.</p>
+        </section>
+      </div>`;
+  },
+
+  depotTable(depot, pf) {
+    const rows = [...pf.positions.values()].filter((p) => p.accountId === depot.id && p.qtyE6 > 0).sort((a, b) => b.valueCents - a.valueCents);
+    const value = rows.reduce((sum, p) => sum + p.valueCents, 0);
+    const gain = rows.reduce((sum, p) => sum + p.gainCents, 0);
+    return `
+      <section>
+        <div class="depot-head">
+          <div><span class="depot-name">${esc(depot.name)}</span> <span class="depot-meta">${esc(fmt.cents(value))}, <span class="${Num.cls(gain)}">${esc(Num.signedCents(gain))}</span></span></div>
+          <div class="actions">
+            <button type="button" class="btn-small" data-action="wealth-fees" data-account="${esc(depot.id)}">Gebühren</button>
+            <button type="button" class="btn-small" data-action="wealth-depot" data-account="${esc(depot.id)}">Bearbeiten</button>
+          </div>
+        </div>
+        ${rows.length ? `
+        <div class="table-wrap">
+          <table class="ledger-table">
+            <thead><tr><th>Wertpapier</th><th>Stück</th><th>Einstand</th><th>Kurs</th><th>Wert</th><th>Gewinn</th></tr></thead>
+            <tbody>
+              ${rows.map((p) => {
+                const sec = pf.securities.get(p.securityId);
+                const estimated = p.txs.some((t) => t.estimated);
+                return `<tr data-action="wealth-position" data-account="${esc(depot.id)}" data-security="${esc(sec.id)}">
+                  <td><div class="sec-name">${esc(sec.name)} ${estimated ? '<span class="tag">geschätzt</span>' : ''}</div><div class="sec-meta">${esc(SECURITY_TYPES[sec.securityType] || '')}, ${esc(sec.isin)}</div></td>
+                  <td>${esc(Num.qty(p.qtyE6))}</td>
+                  <td>${esc(Num.priceShort(p.avgE4))}</td>
+                  <td>${esc(Num.priceShort(p.priceE4))}</td>
+                  <td>${esc(fmt.cents(p.valueCents))}</td>
+                  <td><span class="${Num.cls(p.gainCents)}">${esc(Num.signedCents(p.gainCents))}</span><div class="sec-meta ${Num.cls(p.gainCents)}">${esc(Num.signedPct(p.gainPct))}</div></td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>` : '<p class="note">In diesem Depot ist zurzeit nichts im Bestand.</p>'}
+      </section>`;
+  },
+
+  // ----- Position ansehen und korrigieren ---------------------------------------
+  async position(accountId, securityId) {
+    const pf = await Portfolio.load();
+    const p = pf.positions.get(`${accountId}|${securityId}`);
+    const sec = pf.securities.get(securityId);
+    if (!p || !sec) return;
+    const opt = (value, label, current) => `<option value="${esc(value)}" ${value === current ? 'selected' : ''}>${esc(label)}</option>`;
+    const txRows = p.txs.slice().reverse().map((t) => `
+      <tr>
+        <td>${esc(fmt.date(t.tradeDate))}<div class="sec-meta">${esc(TX_TYPES[t.txType] || t.txType)} ${t.estimated ? '<span class="tag">geschätzt</span>' : ''}</div></td>
+        <td>${t.txType === 'distribution' ? esc(fmt.cents(t.amountCents || 0)) : esc(Num.qty(t.quantityE6))}</td>
+        <td>${t.txType === 'distribution' ? '' : `<input name="price_${esc(t.id)}" inputmode="decimal" value="${esc(Num.input(t.priceE4, 4))}" aria-label="Kurs">`}</td>
+        <td><input name="fee_${esc(t.id)}" inputmode="decimal" value="${esc(Num.input(t.feesCents || 0, 2))}" aria-label="Gebühren"></td>
+        <td><label class="check" style="justify-content:flex-end"><input type="checkbox" name="del_${esc(t.id)}" aria-label="Buchung löschen"></label></td>
+      </tr>`).join('');
+
+    const result = await UI.form({
+      title: sec.name,
+      wide: true,
+      submitLabel: 'Speichern',
+      html: `
+        <dl class="facts">
+          <div><dt>Stück</dt><dd>${esc(Num.qty(p.qtyE6))}</dd></div>
+          <div><dt>Einstand je Stück</dt><dd>${esc(Num.price(p.avgE4))}</dd></div>
+          <div><dt>Kurs${p.priceDate ? ` vom ${esc(fmt.date(p.priceDate))}` : ''}</dt><dd>${esc(Num.price(p.priceE4))}</dd></div>
+          <div><dt>Wert</dt><dd>${esc(fmt.cents(p.valueCents))}</dd></div>
+          <div><dt>Kursgewinn</dt><dd class="${Num.cls(p.gainCents)}">${esc(Num.signedCents(p.gainCents))}</dd></div>
+          <div><dt>Gebühren gesamt</dt><dd>${esc(fmt.cents(p.feesCents))}</dd></div>
+        </dl>
+        <div class="field-grid">
+          <div class="field span-2"><label for="ps-name">Bezeichnung</label><input id="ps-name" name="name" value="${esc(sec.name)}"></div>
+          <div class="field"><label for="ps-type">Art</label><select id="ps-type" name="securityType">${Object.entries(SECURITY_TYPES).map(([v, l]) => opt(v, l, sec.securityType)).join('')}</select></div>
+          <div class="field"><label for="ps-ter">TER in % pro Jahr</label><input id="ps-ter" name="ter" inputmode="decimal" placeholder="z. B. 0,25" value="${sec.ter != null ? esc(String(sec.ter).replace('.', ',')) : ''}"></div>
+          <div class="field span-2"><label for="ps-fund">Fondsart (für die Teilfreistellung)</label><select id="ps-fund" name="fundTaxClass"><option value="">Nicht festgelegt</option>${Object.entries(FUND_TAX_CLASSES).map(([v, l]) => opt(v, l, sec.fundTaxClass)).join('')}</select></div>
+        </div>
+        <h3 class="section-title" style="margin:0.5rem 0 0">Buchungen</h3>
+        <div class="table-wrap">
+          <table class="ledger-table tx-table">
+            <thead><tr><th>Datum</th><th>Stück</th><th>Kurs</th><th>Gebühren</th><th>Löschen</th></tr></thead>
+            <tbody>${txRows}</tbody>
+          </table>
+        </div>
+        <p class="dialog-text">Kurs und Gebühren lassen sich direkt korrigieren, zum Beispiel aus der Wertpapierabrechnung. Korrigierte Buchungen gelten nicht mehr als geschätzt.</p>`,
+      validate: (d) => {
+        if (d.ter && Num.parse(d.ter, 4) == null) return 'Die TER bitte als Zahl eingeben, zum Beispiel 0,25.';
+        for (const t of p.txs) {
+          if (d[`price_${t.id}`] !== undefined && !d[`del_${t.id}`] && !(Num.parse(d[`price_${t.id}`], 4) > 0)) return `Der Kurs vom ${fmt.date(t.tradeDate)} ist nicht lesbar.`;
+          if (Num.parse(d[`fee_${t.id}`] || '0', 2) == null) return `Die Gebühr vom ${fmt.date(t.tradeDate)} ist nicht lesbar.`;
+        }
+        return null;
+      },
+    });
+    if (!result) return;
+
+    const ter = result.ter ? Num.parse(result.ter, 4) / 10000 : null;
+    await DB.write(['securities', 'investmentTransactions'], (s) => {
+      s.securities.put({ ...sec, name: result.name.trim() || sec.name, securityType: result.securityType, ter, fundTaxClass: result.fundTaxClass || null, updatedAt: nowIso() });
+      for (const t of p.txs) {
+        if (result[`del_${t.id}`]) { s.investmentTransactions.delete(t.id); continue; }
+        const priceE4 = t.txType === 'distribution' ? t.priceE4 : Num.parse(result[`price_${t.id}`], 4);
+        const feesCents = Num.parse(result[`fee_${t.id}`] || '0', 2);
+        if (priceE4 !== t.priceE4 || feesCents !== (t.feesCents || 0)) {
+          s.investmentTransactions.put({ ...t, priceE4, feesCents, estimated: false, updatedAt: nowIso() });
+        }
+      }
+    });
+    UI.toast('Gespeichert');
+    App.render();
+  },
+
+  // ----- Buchung erfassen ---------------------------------------------------------
+  async addTransaction() {
+    const pf = await Portfolio.load();
+    const secs = [...pf.securities.values()].sort((a, b) => a.name.localeCompare(b.name, 'de'));
+    let prepared = null;
+
+    const result = await UI.form({
+      title: 'Buchung erfassen',
+      wide: true,
+      submitLabel: 'Buchen',
+      html: `
+        <div class="field-grid">
+          <div class="field"><label for="tx-account">Depot</label>
+            <select id="tx-account" name="account">${pf.depots.map((d) => `<option value="${esc(d.id)}">${esc(d.name)}</option>`).join('')}<option value="__new">Neues Depot anlegen …</option></select></div>
+          <div class="field" data-show="new-depot"><label for="tx-newdepot">Name des neuen Depots</label><input id="tx-newdepot" name="newDepot" placeholder="z. B. DKB-Depot"></div>
+          <div class="field span-2"><label for="tx-security">Wertpapier</label>
+            <select id="tx-security" name="security">${secs.map((s) => `<option value="${esc(s.id)}">${esc(s.name)} (${esc(s.isin)})</option>`).join('')}<option value="__new">Neues Wertpapier …</option></select></div>
+          <div class="field" data-show="new-security"><label for="tx-isin">ISIN</label><input id="tx-isin" name="isin" autocapitalize="characters" autocomplete="off" placeholder="z. B. IE00B4L5Y983"></div>
+          <div class="field" data-show="new-security"><label for="tx-sectype">Art</label><select id="tx-sectype" name="securityType">${Object.entries(SECURITY_TYPES).map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select></div>
+          <div class="field span-2" data-show="new-security"><label for="tx-secname">Bezeichnung</label><input id="tx-secname" name="secName"></div>
+          <div class="field"><label for="tx-type">Art der Buchung</label>
+            <select id="tx-type" name="txType">${Object.entries(TX_TYPES).map(([v, l]) => `<option value="${v}" ${v === 'buy' ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+          <div class="field"><label for="tx-date">Datum</label><input id="tx-date" name="date" type="date" value="${todayIso()}"></div>
+          <div class="field" data-show="units"><label for="tx-qty">Stück</label><input id="tx-qty" name="qty" inputmode="decimal" placeholder="z. B. 12,5"></div>
+          <div class="field" data-show="units"><label for="tx-price">Kurs je Stück in €</label><input id="tx-price" name="price" inputmode="decimal" placeholder="z. B. 98,45"></div>
+          <div class="field" data-show="amount"><label for="tx-amount">Betrag in €</label><input id="tx-amount" name="amount" inputmode="decimal"></div>
+          <div class="field"><label for="tx-fee">Gebühren in €</label><input id="tx-fee" name="fee" inputmode="decimal" value="0,00"></div>
+          <div class="field" data-show="taxes"><label for="tx-tax">Abgeführte Steuern in €</label><input id="tx-tax" name="tax" inputmode="decimal" value="0,00"></div>
+        </div>
+        <p class="dialog-text" id="tx-fee-hint"></p>`,
+      onOpen: (form) => {
+        const feeInput = form.elements.fee;
+        const update = () => {
+          const newDepot = form.elements.account.value === '__new';
+          const newSec = form.elements.security.value === '__new';
+          const type = form.elements.txType.value;
+          $$('[data-show="new-depot"]', form).forEach((el) => { el.hidden = !newDepot; });
+          $$('[data-show="new-security"]', form).forEach((el) => { el.hidden = !newSec; });
+          $$('[data-show="units"]', form).forEach((el) => { el.hidden = type === 'distribution'; });
+          $$('[data-show="amount"]', form).forEach((el) => { el.hidden = type !== 'distribution'; });
+          $$('[data-show="taxes"]', form).forEach((el) => { el.hidden = !['sell', 'distribution'].includes(type); });
+          // Gebühr nach Preismodell vorschlagen, solange sie nicht selbst geändert wurde
+          const account = pf.depots.find((d) => d.id === form.elements.account.value);
+          const qty = Num.parse(form.elements.qty.value, 6);
+          const price = Num.parse(form.elements.price.value, 4);
+          const hint = $('#tx-fee-hint', form);
+          if (account && account.feeRules?.length && qty && price && type !== 'opening' && type !== 'distribution') {
+            const fee = Portfolio.feeFor(account, type, Num.valueCents(qty, price));
+            if (!feeInput.dataset.touched) feeInput.value = Num.input(fee, 2);
+            hint.textContent = `Laut Preismodell von „${account.name}“: ${fmt.cents(fee)}.`;
+          } else {
+            hint.textContent = account && !account.feeRules?.length ? 'Tipp: Unter „Gebühren“ am Depot kannst du das Preismodell hinterlegen. Dann schlägt die App die Gebühr vor.' : '';
+          }
+        };
+        feeInput.addEventListener('input', () => { feeInput.dataset.touched = '1'; });
+        form.addEventListener('input', update);
+        form.addEventListener('change', update);
+        if (!pf.depots.length) form.elements.account.value = '__new';
+        if (!secs.length) form.elements.security.value = '__new';
+        update();
+      },
+      validate: (d) => {
+        if (d.account === '__new' && !(d.newDepot || '').trim()) return 'Bitte einen Namen für das neue Depot eingeben.';
+        const isin = (d.isin || '').trim().toUpperCase();
+        if (d.security === '__new') {
+          if (!/^[A-Z]{2}[A-Z0-9]{9}\d$/.test(isin)) return 'Die ISIN hat 12 Zeichen, zum Beispiel IE00B4L5Y983.';
+          if (secs.some((s) => s.isin === isin)) return 'Dieses Wertpapier gibt es schon. Bitte in der Liste auswählen.';
+          if (!(d.secName || '').trim()) return 'Bitte eine Bezeichnung für das Wertpapier eingeben.';
+        }
+        if (!d.date) return 'Bitte ein Datum wählen.';
+        const fees = Num.parse(d.fee || '0', 2);
+        const taxes = Num.parse(d.tax || '0', 2);
+        if (fees == null || fees < 0) return 'Die Gebühr ist nicht lesbar.';
+        if (taxes == null || taxes < 0) return 'Die Steuer ist nicht lesbar.';
+        const tx = { txType: d.txType, tradeDate: d.date, feesCents: fees, taxesCents: ['sell', 'distribution'].includes(d.txType) ? taxes : 0 };
+        if (d.txType === 'distribution') {
+          const amount = Num.parse(d.amount, 2);
+          if (!(amount > 0)) return 'Bitte den ausgeschütteten Betrag eingeben.';
+          Object.assign(tx, { amountCents: amount, quantityE6: 0, priceE4: 0 });
+        } else {
+          const qty = Num.parse(d.qty, 6);
+          const price = Num.parse(d.price, 4);
+          if (!(qty > 0)) return 'Bitte die Stückzahl eingeben.';
+          if (!(price > 0)) return 'Bitte den Kurs je Stück eingeben.';
+          if (d.txType === 'sell' && d.security !== '__new') {
+            const held = pf.positions.get(`${d.account}|${d.security}`)?.qtyE6 || 0;
+            if (qty > held) return `Im Depot sind nur ${Num.qty(held)} Stück vorhanden.`;
+          }
+          Object.assign(tx, { quantityE6: qty, priceE4: price });
+        }
+        prepared = { d, isin, tx };
+        return null;
+      },
+    });
+    if (!result || !prepared) return;
+
+    const { d, isin, tx } = prepared;
+    const now = nowIso();
+    const accountId = d.account === '__new' ? crypto.randomUUID() : d.account;
+    const securityId = d.security === '__new' ? crypto.randomUUID() : d.security;
+    await DB.write(['accounts', 'securities', 'investmentTransactions'], (s) => {
+      if (d.account === '__new') s.accounts.put({ id: accountId, name: d.newDepot.trim(), institution: '', accountType: 'depot', depotNumber: null, feeRules: [], createdAt: now, updatedAt: now });
+      if (d.security === '__new') s.securities.put({ id: securityId, isin, wkn: '', name: d.secName.trim(), securityType: d.securityType, ter: null, fundTaxClass: null, priceSymbol: null, exposures: [], createdAt: now, updatedAt: now });
+      s.investmentTransactions.put({ id: crypto.randomUUID(), accountId, securityId, ...tx, estimated: false, source: 'manual', createdAt: now });
+    });
+    UI.toast('Gebucht');
+    App.render();
+  },
+
+  // ----- Preismodell des Depots -----------------------------------------------------
+  async fees(accountId) {
+    const account = await DB.get('accounts', accountId);
+    const rule = (type) => (account.feeRules || []).find((r) => r.txType === type) || {};
+    const money = (c) => (c ? Num.input(c, 2) : '');
+    const labels = { buy: 'Kauf', savings_plan: 'Sparplan', sell: 'Verkauf' };
+    const result = await UI.form({
+      title: `Gebühren: ${account.name}`,
+      wide: true,
+      submitLabel: 'Speichern',
+      html: `
+        <p class="dialog-text">Trag das Preismodell deines Depots ein. Die Gebühr ergibt sich aus Fixbetrag plus Prozentsatz vom Ordervolumen, begrenzt durch Minimum und Maximum. Leere Felder zählen als 0.</p>
+        <div class="table-wrap">
+          <table class="ledger-table tx-table">
+            <thead><tr><th>Art</th><th>Fix in €</th><th>Prozent</th><th>Minimum €</th><th>Maximum €</th></tr></thead>
+            <tbody>${FEE_RULE_TYPES.map((t) => {
+              const r = rule(t);
+              return `<tr><td>${labels[t]}</td>
+                <td><input name="fixed_${t}" inputmode="decimal" value="${esc(money(r.fixedCents))}" aria-label="Fix ${labels[t]}"></td>
+                <td><input name="pct_${t}" inputmode="decimal" value="${r.pct ? esc(String(r.pct).replace('.', ',')) : ''}" aria-label="Prozent ${labels[t]}"></td>
+                <td><input name="min_${t}" inputmode="decimal" value="${esc(money(r.minCents))}" aria-label="Minimum ${labels[t]}"></td>
+                <td><input name="max_${t}" inputmode="decimal" value="${esc(money(r.maxCents))}" aria-label="Maximum ${labels[t]}"></td></tr>`;
+            }).join('')}</tbody>
+          </table>
+        </div>`,
+      validate: (d) => {
+        for (const t of FEE_RULE_TYPES) for (const f of ['fixed', 'pct', 'min', 'max']) {
+          if (d[`${f}_${t}`] && Num.parse(d[`${f}_${t}`], 4) == null) return `Bei ${labels[t]} ist ein Wert nicht lesbar.`;
+        }
+        return null;
+      },
+    });
+    if (!result) return;
+    const cents = (v) => (v ? Num.parse(v, 2) : 0);
+    const feeRules = FEE_RULE_TYPES.map((t) => ({
+      txType: t, fixedCents: cents(result[`fixed_${t}`]), pct: result[`pct_${t}`] ? Num.parse(result[`pct_${t}`], 4) / 10000 : 0,
+      minCents: cents(result[`min_${t}`]), maxCents: cents(result[`max_${t}`]),
+    })).filter((r) => r.fixedCents || r.pct || r.minCents || r.maxCents);
+    await DB.put('accounts', { ...account, feeRules, updatedAt: nowIso() });
+    UI.toast('Preismodell gespeichert');
+    App.render();
+  },
+
+  // ----- Depot umbenennen oder löschen -----------------------------------------------
+  async editDepot(accountId) {
+    const account = await DB.get('accounts', accountId);
+    const result = await UI.form({
+      title: 'Depot bearbeiten',
+      submitLabel: 'Speichern',
+      html: `
+        <div class="field"><label for="dp-name">Name</label><input id="dp-name" name="name" value="${esc(account.name)}"></div>
+        <label class="check"><input type="checkbox" name="remove"> Depot mit allen Buchungen löschen</label>`,
+      validate: (d) => (!d.remove && !(d.name || '').trim() ? 'Bitte einen Namen eingeben.' : null),
+    });
+    if (!result) return;
+    if (result.remove) {
+      const ok = await UI.confirm({ title: `„${account.name}“ löschen?`, text: 'Alle Buchungen dieses Depots werden gelöscht. Wertpapiere und Kurse bleiben für andere Depots erhalten.', confirmLabel: 'Löschen', danger: true });
+      if (!ok) return;
+      const txs = await DB.byIndex('investmentTransactions', 'accountId', accountId);
+      await DB.write(['accounts', 'investmentTransactions'], (s) => {
+        s.accounts.delete(accountId);
+        txs.forEach((t) => s.investmentTransactions.delete(t.id));
+      });
+      UI.toast('Depot gelöscht');
+    } else {
+      await DB.put('accounts', { ...account, name: result.name.trim(), updatedAt: nowIso() });
+      UI.toast('Gespeichert');
+    }
+    App.render();
+  },
+};
+
 const MODULES = [
   { id: 'start', title: 'Übersicht', icon: 'overview', render: Pages.start },
   {
     id: 'vermoegen', title: 'Vermögen', icon: 'wealth',
     summary: 'ETFs, Aktien und Konten, Gehalt, Fixkosten und Sparrate',
-    render: Pages.placeholder('Dein Depot, deine Konten und was jeden Monat übrig bleibt.', [
-      'DKB-Depot per CSV importieren oder Käufe von Hand erfassen',
-      'Gebühren je Transaktion und laufende Kosten über die TER',
-      'Nettogehalt, Fixkosten und freie Sparrate',
-    ]),
+    state: (ctx) => (ctx.depotValue != null ? `Depots ${fmt.cents(ctx.depotValue)}` : 'Bereit für den Import'),
+    render: (view) => Wealth.render(view),
   },
   {
     id: 'immobilien', title: 'Immobilien', icon: 'property',
@@ -1646,6 +2434,12 @@ const App = {
 
     'backup-create': () => Backup.create(),
 
+    // Modul Vermögen
+    'wealth-tx-add': () => Wealth.addTransaction(),
+    'wealth-position': (el) => Wealth.position(el.dataset.account, el.dataset.security),
+    'wealth-fees': (el) => Wealth.fees(el.dataset.account),
+    'wealth-depot': (el) => Wealth.editDepot(el.dataset.account),
+
     async 'storage-persist'() {
       let granted = false;
       try { granted = await navigator.storage.persist(); } catch (_) { /* nicht verfügbar */ }
@@ -1708,6 +2502,11 @@ const App = {
         if (el.dataset.setting === 'autoLockMinutes') App.autoLockMinutes = value;
         if (el.dataset.setting === 'backupReminderDays') { App.renderNav(); App.render(); }
         UI.toast('Gespeichert');
+      }
+      if (el.matches('[data-change="wealth-import"]') && el.files?.[0]) {
+        const file = el.files[0];
+        el.value = '';
+        DepotImport.start(file).catch((err) => { console.error(err); UI.toast('Der Import ist fehlgeschlagen.', { error: true }); });
       }
       if (el.matches('[data-change="backup-restore"]') && el.files?.[0]) {
         const file = el.files[0];
