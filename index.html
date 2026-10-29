@@ -1,0 +1,1752 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--
+  Sicherheitsregeln für den Browser: Skripte nur aus dieser Datei, Netzwerk nur
+  zur eigenen Adresse und zur Claude-API. Kommt später ein Kursdienst dazu,
+  wird seine Adresse bei connect-src ergänzt.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.anthropic.com; worker-src 'self'; frame-src 'self' blob:; object-src 'none'; base-uri 'none'">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#17313b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Cockpit">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-180.png">
+<title>Finanz-Cockpit</title>
+
+<style>
+/* =============================================================================
+   1. Design-Tokens
+   Farben und Schriften an einer Stelle – alle Module greifen darauf zu.
+   ============================================================================= */
+:root {
+  color-scheme: light;
+  --paper: #eef2ef;          /* Seitenhintergrund, kühles Graugrün */
+  --surface: #f9fbf9;        /* Flächen für Gruppen und Dialoge */
+  --ink: #15232b;            /* Text */
+  --muted: #5a6871;          /* Nebentext */
+  --rule: #d3dbd6;           /* Linien */
+  --rail: #17313b;           /* Seitenleiste, Tintenblau */
+  --rail-ink: #e4ece8;
+  --rail-muted: #9db3b1;
+  --rail-active: rgba(228, 236, 232, 0.12);
+  --rail-rule: rgba(228, 236, 232, 0.14);
+  --accent: #1d7550;         /* Kontogrün: positive Werte, Hauptaktionen */
+  --accent-ink: #ffffff;
+  --neg: #b0281f;            /* negative Werte, Löschen */
+  --warn: #8f5b00;           /* Hinweise, fällige Aufgaben */
+  --warn-bg: #f6ecd9;
+  --warn-rule: #e6d2a8;
+  --shadow: 0 18px 50px rgba(15, 30, 36, 0.22);
+
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+
+  --rail-w: 15.5rem;
+  --radius: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --paper: #0f171b;
+    --surface: #152027;
+    --ink: #e2e9e5;
+    --muted: #93a3a9;
+    --rule: #263540;
+    --rail: #0a1114;
+    --rail-ink: #dde6e2;
+    --rail-muted: #82979a;
+    --rail-active: rgba(221, 230, 226, 0.1);
+    --rail-rule: rgba(221, 230, 226, 0.1);
+    --accent: #4cc08a;
+    --accent-ink: #0a1a12;
+    --neg: #f0786c;
+    --warn: #e2a640;
+    --warn-bg: #2a2214;
+    --warn-rule: #4a3a1c;
+    --shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* =============================================================================
+   2. Grundlagen
+   ============================================================================= */
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 17px/1.5 var(--sans);
+  font-variant-numeric: tabular-nums;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1, h2, h3, p { margin: 0; }
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* --- Bedienelemente (alle mindestens 44 pt hoch für Touch) ------------------ */
+button, .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0 1.1rem;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 600 1rem var(--sans);
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+button:active, .btn:active { transform: translateY(1px); }
+button:disabled { opacity: 0.45; cursor: default; transform: none; }
+
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn-danger { color: var(--neg); }
+.btn-danger-solid { background: var(--neg); border-color: var(--neg); color: #fff; }
+.btn-link { background: none; border: 0; color: inherit; text-decoration: underline; text-underline-offset: 3px; font-weight: 500; }
+.btn-block { width: 100%; }
+
+input, select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 17px var(--sans);   /* ab 16 px zoomt iOS beim Antippen nicht */
+}
+input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23889' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+}
+
+.compact { width: auto; min-width: 11rem; }
+
+label.check { display: flex; align-items: center; gap: 0.75rem; min-height: 44px; font-weight: 500; }
+label.check input { width: 1.375rem; min-height: 1.375rem; height: 1.375rem; accent-color: var(--accent); }
+
+.field { display: grid; gap: 0.375rem; }
+.field label { font-size: 0.9375rem; font-weight: 500; color: var(--muted); }
+
+/* Unsichtbares Datei-Feld, das über ein Label ausgelöst wird */
+.file-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+/* =============================================================================
+   3. App-Rahmen: Seitenleiste + Inhalt (optimiert fürs Querformat)
+   ============================================================================= */
+.app {
+  display: grid;
+  grid-template-columns: var(--rail-w) 1fr;
+  height: 100%;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  background: var(--rail);
+  color: var(--rail-ink);
+  padding:
+    max(1.25rem, env(safe-area-inset-top))
+    0.75rem
+    max(1rem, env(safe-area-inset-bottom))
+    max(0.75rem, env(safe-area-inset-left));
+  overflow-y: auto;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.25rem 0.75rem 1.75rem;
+  font: 600 1.375rem/1.2 var(--serif);
+}
+.brand svg { width: 28px; height: 28px; flex: none; }
+
+.nav { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.nav a, .nav button {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--rail-muted);
+  font: 500 1rem var(--sans);
+  text-decoration: none;
+  justify-content: flex-start;
+}
+.nav a[aria-current="page"] { background: var(--rail-active); color: var(--rail-ink); }
+.nav svg { width: 22px; height: 22px; flex: none; }
+.nav .dot { margin-left: auto; width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
+
+.nav-foot { margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--rail-rule); }
+
+.content {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding:
+    max(2.25rem, env(safe-area-inset-top))
+    max(2.5rem, env(safe-area-inset-right))
+    max(3rem, env(safe-area-inset-bottom))
+    2.5rem;
+}
+
+.page { max-width: 58rem; }
+
+.page-head { margin-bottom: 2rem; }
+.page-title { font: 600 2.375rem/1.1 var(--serif); letter-spacing: -0.01em; }
+.page-sub { margin-top: 0.5rem; color: var(--muted); max-width: 40rem; }
+
+.section { margin-top: 2.25rem; }
+.section:first-of-type { margin-top: 0; }
+.section-title { margin: 0 0 0.625rem 0.25rem; font-size: 0.9375rem; font-weight: 600; color: var(--muted); }
+.note { margin: 0.625rem 0.25rem 0; font-size: 0.9375rem; color: var(--muted); max-width: 44rem; }
+
+/* --- Gruppen im Stil der iPad-Einstellungen ------------------------------- */
+.group {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 60px;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--rule);
+}
+.row:first-child { border-top: 0; }
+.row-main { flex: 1; min-width: 0; }
+.row-label { font-weight: 500; }
+.row-hint { margin-top: 0.125rem; font-size: 0.9375rem; color: var(--muted); }
+.row-value { color: var(--muted); text-align: right; }
+.row-form input { flex: 1; }
+
+.is-ok { color: var(--accent); }
+.is-warn { color: var(--warn); }
+.is-neg { color: var(--neg); }
+
+/* --- Hinweisbanner ------------------------------------------------------- */
+.banner {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--warn-rule);
+  border-radius: var(--radius);
+  background: var(--warn-bg);
+}
+.banner strong { display: block; margin-bottom: 0.125rem; }
+.banner p { color: var(--muted); font-size: 0.9375rem; }
+
+/* --- Bereichsliste auf der Übersicht: gesetzt wie Zeilen in einem Kontobuch -- */
+.ledger { border-top: 2px solid var(--ink); }
+.ledger-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 1.5rem;
+  padding: 1.125rem 0.25rem;
+  border-bottom: 1px solid var(--rule);
+  color: inherit;
+  text-decoration: none;
+}
+.ledger-name { display: block; font: 600 1.3125rem/1.3 var(--serif); }
+.ledger-hint { display: block; margin-top: 0.125rem; color: var(--muted); font-size: 0.9375rem; }
+.ledger-state { color: var(--muted); font-size: 0.9375rem; }
+
+/* --- Leere Bereiche ------------------------------------------------------ */
+.empty { padding: 1.5rem 0 0; border-top: 2px solid var(--ink); max-width: 40rem; }
+.empty-title { font-weight: 600; }
+.empty-list { margin: 0.75rem 0 1.5rem; padding-left: 1.25rem; color: var(--muted); }
+.empty-list li { margin: 0.25rem 0; }
+
+/* =============================================================================
+   4. Sperrbildschirm
+   ============================================================================= */
+.lock {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: max(2rem, env(safe-area-inset-top)) 1.5rem max(2rem, env(safe-area-inset-bottom));
+  background: var(--rail);
+  color: var(--rail-ink);
+}
+.lock-box { width: min(23rem, 100%); display: grid; gap: 1.125rem; text-align: center; }
+.lock-mark { justify-self: center; width: 64px; height: 64px; }
+.lock-title { font: 600 2rem/1.15 var(--serif); }
+.lock-text, .lock-fine { color: var(--rail-muted); }
+.lock-fine { font-size: 0.9375rem; }
+.lock-form { display: grid; gap: 0.75rem; }
+.lock-form input {
+  min-height: 54px;
+  text-align: center;
+  font-size: 1.375rem;
+  letter-spacing: 0.25em;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--rail-ink);
+}
+.lock-form input::placeholder { letter-spacing: normal; font-size: 1rem; color: var(--rail-muted); }
+.lock-error { min-height: 1.5em; color: #ffb4a8; font-size: 0.9375rem; }
+.lock .btn-primary { min-height: 52px; background: #4cc08a; border-color: #4cc08a; color: #0a1a12; }
+
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+.segmented button { min-height: 40px; border: 0; background: none; color: var(--rail-muted); }
+.segmented button[aria-pressed="true"] { background: rgba(255, 255, 255, 0.14); color: var(--rail-ink); }
+
+/* =============================================================================
+   5. Dialoge, Hinweise, Ladeanzeige
+   ============================================================================= */
+dialog {
+  width: min(32rem, calc(100vw - 2rem));
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+dialog::backdrop { background: rgba(8, 18, 22, 0.5); }
+.dialog-body { display: grid; gap: 1rem; padding: 1.5rem 1.5rem 1rem; }
+.dialog-title { font: 600 1.5rem/1.2 var(--serif); }
+.dialog-text { color: var(--muted); }
+.form-error { min-height: 1.4em; color: var(--neg); font-size: 0.9375rem; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 0.625rem; padding: 0 1.5rem 1.5rem; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(1.5rem, env(safe-area-inset-bottom));
+  z-index: 100;
+  max-width: calc(100vw - 2rem);
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 500;
+  transform: translate(-50%, 0.5rem);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast.is-error { background: var(--neg); color: #fff; }
+
+.busy {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 18, 22, 0.35);
+}
+.busy-box {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 1rem 1.375rem;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  font-weight: 500;
+}
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid var(--rule);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.fatal { max-width: 34rem; margin: 15vh auto; padding: 0 1.5rem; }
+.fatal h1 { font: 600 2rem var(--serif); margin-bottom: 1rem; }
+
+/* =============================================================================
+   6. Hochformat und schmale Fenster (Split View): Leiste nur mit Symbolen
+   ============================================================================= */
+@media (max-width: 920px) {
+  :root { --rail-w: 4.75rem; }
+  .brand-text, .nav-label { display: none; }
+  .brand { justify-content: center; padding-left: 0; padding-right: 0; }
+  .nav a, .nav button { justify-content: center; padding: 0; }
+  .nav .dot { position: absolute; margin: -16px 0 0 18px; }
+  .nav a { position: relative; }
+  .content { padding-left: 1.5rem; padding-right: max(1.5rem, env(safe-area-inset-right)); }
+}
+@media (max-width: 640px) {
+  .row { flex-wrap: wrap; }
+  .compact { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- Sperrbildschirm: wird beim Start und nach Inaktivität angezeigt -->
+<div id="lock" class="lock" hidden></div>
+
+<!-- App -->
+<div id="app" class="app" hidden>
+  <nav class="rail" aria-label="Bereiche">
+    <div class="brand">
+      <svg viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="7" fill="#24434f"/><rect x="6.5" y="14" width="3.6" height="7" rx="1" fill="#c9d8d1"/><rect x="12.2" y="11" width="3.6" height="10" rx="1" fill="#c9d8d1"/><rect x="17.9" y="7" width="3.6" height="14" rx="1" fill="#4cc08a"/></svg>
+      <span class="brand-text">Finanz-Cockpit</span>
+    </div>
+    <ul class="nav" id="nav-main"></ul>
+    <ul class="nav nav-foot" id="nav-foot"></ul>
+  </nav>
+  <main id="view" class="content" tabindex="-1"></main>
+</div>
+
+<dialog id="dialog"></dialog>
+<div id="busy" class="busy" hidden><div class="busy-box"><span class="spinner" aria-hidden="true"></span><span id="busy-text"></span></div></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* =============================================================================
+   0. KONFIGURATION
+   ============================================================================= */
+const APP_VERSION = '0.1.0';
+const DB_NAME = 'finanzcockpit';
+const DB_VERSION = 1;                 // bei Schema-Änderungen erhöhen + MIGRATIONS ergänzen
+const PBKDF2_ITERATIONS = 600000;     // Rechenaufwand pro PIN-Prüfung (Schutz gegen Durchprobieren)
+
+const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
+const CLAUDE_API_VERSION = '2023-06-01';
+const DEFAULT_MODEL = 'claude-sonnet-5-5';
+const MODEL_SUGGESTIONS = [
+  ['claude-sonnet-5-5', 'Sonnet 5.5, ausgewogen'],
+  ['claude-opus-5-5', 'Opus 5.5, gründlicher und teurer'],
+  ['claude-haiku-5-5', 'Haiku 5.5, schnell und günstig'],
+];
+
+// Diese Einstellungen gehören zum Gerät und kommen nie in eine Sicherungsdatei
+const DEVICE_ONLY_SETTINGS = ['appLock', 'anthropicApiKey', 'lockAttempts', 'lastBackupAt'];
+
+// Steuerkategorien für die Anlage V. Zeilennummern (formLines) ändern sich
+// jährlich und werden im Steuer-Modul je Jahr gepflegt.
+//   kind: income = Einnahme, expense = Werbungskosten
+//   defaultDeduction: immediate = sofort, depreciation = über AfA, spread = auf Jahre verteilbar
+const DEFAULT_TAX_CATEGORIES = [
+  { code: 'rent_cold',             name: 'Mieteinnahmen (Kaltmiete)',              kind: 'income',  defaultDeduction: null },
+  { code: 'rent_utilities',        name: 'Umlagen und Nebenkostenvorauszahlungen', kind: 'income',  defaultDeduction: null },
+  { code: 'income_other',          name: 'Sonstige Einnahmen',                     kind: 'income',  defaultDeduction: null },
+  { code: 'depreciation_building', name: 'AfA Gebäude',                            kind: 'expense', defaultDeduction: 'depreciation' },
+  { code: 'depreciation_other',    name: 'AfA Einbauküche und Inventar',           kind: 'expense', defaultDeduction: 'depreciation' },
+  { code: 'interest',              name: 'Schuldzinsen',                           kind: 'expense', defaultDeduction: 'immediate' },
+  { code: 'financing_costs',       name: 'Geldbeschaffungskosten',                 kind: 'expense', defaultDeduction: 'immediate' },
+  { code: 'maintenance',           name: 'Erhaltungsaufwand',                      kind: 'expense', defaultDeduction: 'spread' },
+  { code: 'property_tax',          name: 'Grundsteuer',                            kind: 'expense', defaultDeduction: 'immediate' },
+  { code: 'insurance',             name: 'Versicherungen',                         kind: 'expense', defaultDeduction: 'immediate' },
+  { code: 'operating_costs',       name: 'Umlagefähige Betriebskosten',            kind: 'expense', defaultDeduction: 'immediate' },
+  { code: 'management',            name: 'Verwaltung (nicht umlagefähig)',         kind: 'expense', defaultDeduction: 'immediate' },
+  { code: 'travel',                name: 'Fahrtkosten',                            kind: 'expense', defaultDeduction: 'immediate' },
+  { code: 'bank_fees',             name: 'Kontoführung',                           kind: 'expense', defaultDeduction: 'immediate' },
+  { code: 'tax_advice',            name: 'Steuerberatung',                         kind: 'expense', defaultDeduction: 'immediate' },
+  { code: 'expense_other',         name: 'Sonstige Werbungskosten',                kind: 'expense', defaultDeduction: 'immediate' },
+].map((c) => ({ ...c, formLines: {} }));
+
+/* =============================================================================
+   1. HILFSFUNKTIONEN
+   ============================================================================= */
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nowIso = () => new Date().toISOString();
+const todayIso = () => new Date().toLocaleDateString('sv-SE');   // lokales Datum als JJJJ-MM-TT
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
+
+const fmt = {
+  eur: new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }),
+  cents(c) { return fmt.eur.format((c || 0) / 100); },              // Beträge liegen in Cent vor
+  date(iso) { return iso ? new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '–'; },
+  dateTime(iso) { return iso ? new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' Uhr' : '–'; },
+  longDate(d = new Date()) { return d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); },
+  bytes(n) {
+    if (n == null) return '–';
+    const units = ['Byte', 'KB', 'MB', 'GB'];
+    let i = 0;
+    while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+    return `${n.toLocaleString('de-DE', { maximumFractionDigits: i ? 1 : 0 })} ${units[i]}`;
+  },
+};
+
+// Base64 <-> Bytes, in Blöcken, damit auch große Belege nicht abstürzen
+const b64 = {
+  fromBytes(bytes) {
+    let s = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(s);
+  },
+  toBytes(str) {
+    const bin = atob(str);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  },
+};
+
+const isStandalone = () => window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+
+/* =============================================================================
+   2. DATENBANK (IndexedDB)
+   Jede Schema-Version ist eine Funktion in MIGRATIONS. Beim Öffnen laufen alle
+   noch fehlenden Versionen nacheinander – vorhandene Daten bleiben erhalten.
+   Neue Version: DB_VERSION erhöhen und MIGRATIONS[n] ergänzen.
+   ============================================================================= */
+const promisify = (request) => new Promise((resolve, reject) => {
+  request.onsuccess = () => resolve(request.result);
+  request.onerror = () => reject(request.error);
+});
+
+const MIGRATIONS = {
+  1(db) {
+    const store = (name, keyPath, indexes = []) => {
+      const s = db.createObjectStore(name, { keyPath });
+      indexes.forEach(([indexName, path, options]) => s.createIndex(indexName, path, options || {}));
+      return s;
+    };
+
+    // A · Einstellungen & Steuerbasis
+    const settings = store('settings', 'key');
+    store('taxProfiles', 'taxYear');
+    store('taxParameters', 'id', [['taxYear', 'taxYear']]);
+
+    // B · Vermögen & Cashflow
+    store('accounts', 'id', [['accountType', 'accountType']]);
+    store('accountBalances', 'id', [['accountId', 'accountId'], ['accountDate', ['accountId', 'date']]]);
+    store('securities', 'id', [['isin', 'isin', { unique: true }]]);
+    store('investmentTransactions', 'id', [['accountId', 'accountId'], ['securityId', 'securityId'], ['tradeDate', 'tradeDate'], ['importBatchId', 'importBatchId']]);
+    store('securityPrices', 'id', [['securityDate', ['securityId', 'date'], { unique: true }]]);
+    store('csvImportProfiles', 'id');
+    store('importBatches', 'id', [['fileHash', 'fileHash', { unique: true }]]);
+    store('recurringCashflows', 'id', [['direction', 'direction']]);
+    store('netWorthSnapshots', 'date');
+
+    // C · Immobilien
+    store('properties', 'id', [['status', 'status']]);
+    store('leases', 'id', [['propertyId', 'propertyId'], ['unitId', 'unitId']]);
+    store('loans', 'id', [['propertyId', 'propertyId']]);
+
+    // D · KI-Beratung
+    store('aiPrompts', 'id');
+    store('aiSessions', 'id', [['createdAt', 'createdAt']]);
+
+    // E · Simulation
+    store('scenarios', 'id', [['status', 'status']]);
+
+    // F · Steuer & Belege
+    store('documents', 'id', [['propertyYear', ['propertyId', 'taxYear']], ['sha256', 'sha256', { unique: true }], ['documentDate', 'documentDate']]);
+    store('documentFiles', 'documentId');
+    const categories = store('taxCategories', 'code');
+    store('taxEntries', 'id', [['propertyYear', ['propertyId', 'taxYear']], ['categoryCode', 'categoryCode'], ['paymentDate', 'paymentDate'], ['source', 'source'], ['documentIds', 'documentIds', { multiEntry: true }]]);
+    store('mileageLogs', 'id', [['propertyId', 'propertyId'], ['tripDate', 'tripDate']]);
+    store('fiscalYearClosings', 'id');
+    store('auditLog', 'id', [['record', ['storeName', 'recordId']], ['timestamp', 'timestamp']]);
+
+    // Startwerte
+    settings.put({ key: 'aiModel', value: DEFAULT_MODEL });
+    settings.put({ key: 'autoLockMinutes', value: 5 });
+    settings.put({ key: 'backupReminderDays', value: 14 });
+    DEFAULT_TAX_CATEGORIES.forEach((c) => categories.put(c));
+  },
+};
+
+const DB = {
+  conn: null,
+
+  open() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onupgradeneeded = (event) => {
+        for (let v = event.oldVersion + 1; v <= DB_VERSION; v++) MIGRATIONS[v](request.result, request.transaction);
+      };
+      request.onsuccess = () => {
+        DB.conn = request.result;
+        // Öffnet eine neuere App-Version die Datenbank, sauber neu laden
+        DB.conn.onversionchange = () => { DB.conn.close(); location.reload(); };
+        resolve(DB.conn);
+      };
+      request.onerror = () => reject(request.error);
+      request.onblocked = () => reject(new Error('Die App ist noch in einem anderen Fenster geöffnet. Bitte dort schließen.'));
+    });
+  },
+
+  storeNames() { return Array.from(DB.conn.objectStoreNames); },
+
+  get(store, key) { return promisify(DB.conn.transaction(store).objectStore(store).get(key)); },
+  getAll(store) { return promisify(DB.conn.transaction(store).objectStore(store).getAll()); },
+  byIndex(store, index, query) { return promisify(DB.conn.transaction(store).objectStore(store).index(index).getAll(query)); },
+  put(store, value) { return DB.write(store, (s) => s.put(value)); },
+  delete(store, key) { return DB.write(store, (s) => s.delete(key)); },
+
+  /**
+   * Schreibt in EINER Transaktion – entweder alles oder nichts.
+   * stores: Name (String) oder Liste von Namen. fn erhält das Store-Objekt
+   * bzw. ein Objekt { name: store }. Achtung: in fn nichts awaiten, sonst
+   * schließt IndexedDB die Transaktion vorzeitig.
+   */
+  write(stores, fn) {
+    return new Promise((resolve, reject) => {
+      const names = Array.isArray(stores) ? stores : [stores];
+      const tx = DB.conn.transaction(names, 'readwrite');
+      const handles = Array.isArray(stores)
+        ? Object.fromEntries(names.map((n) => [n, tx.objectStore(n)]))
+        : tx.objectStore(stores);
+      let result;
+      try { result = fn(handles, tx); } catch (err) { try { tx.abort(); } catch (_) { /* bereits beendet */ } reject(err); return; }
+      tx.oncomplete = () => resolve(result);
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new Error('Speichern abgebrochen'));
+    });
+  },
+
+  /** Liest mehrere Stores vollständig in einer gemeinsamen Lesetransaktion. */
+  async readAll(names) {
+    const tx = DB.conn.transaction(names, 'readonly');
+    const results = await Promise.all(names.map((n) => promisify(tx.objectStore(n).getAll())));
+    return Object.fromEntries(names.map((n, i) => [n, results[i]]));
+  },
+
+  async destroy() {
+    if (DB.conn) DB.conn.close();
+    await promisify(indexedDB.deleteDatabase(DB_NAME));
+  },
+};
+
+/** Einfacher Zugriff auf Schlüssel-Wert-Einstellungen. */
+const Settings = {
+  async get(key, fallback = null) { const rec = await DB.get('settings', key); return rec ? rec.value : fallback; },
+  set(key, value) { return DB.put('settings', { key, value }); },
+  remove(key) { return DB.delete('settings', key); },
+};
+
+/* =============================================================================
+   3. VERSCHLÜSSELUNG (WebCrypto)
+   Aufbau: Ein zufälliger Datenschlüssel (AES-256-GCM) verschlüsselt geheime
+   Werte wie den API-Schlüssel. Dieser Datenschlüssel wird selbst mit einem aus
+   der PIN abgeleiteten Schlüssel (PBKDF2) verpackt gespeichert. PIN ändern =
+   nur neu verpacken, der API-Schlüssel bleibt gültig.
+   ============================================================================= */
+const Vault = {
+  key: null,   // entpackter Datenschlüssel – nur im Arbeitsspeicher, solange entsperrt
+
+  async deriveKey(secret, salt, iterations, usages) {
+    const base = await crypto.subtle.importKey('raw', textEncoder.encode(secret), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, usages);
+  },
+
+  async wrapDataKey(dataKey, secret) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const kek = await Vault.deriveKey(secret, salt, PBKDF2_ITERATIONS, ['wrapKey', 'unwrapKey']);
+    const wrapped = await crypto.subtle.wrapKey('raw', dataKey, kek, { name: 'AES-GCM', iv });
+    return { version: 1, iterations: PBKDF2_ITERATIONS, salt: b64.fromBytes(salt), iv: b64.fromBytes(iv), wrappedKey: b64.fromBytes(new Uint8Array(wrapped)) };
+  },
+
+  /** Entpackt den Datenschlüssel. Wirft einen Fehler, wenn die PIN falsch ist. */
+  async unwrapDataKey(secret, record, extractable = false) {
+    const kek = await Vault.deriveKey(secret, b64.toBytes(record.salt), record.iterations, ['wrapKey', 'unwrapKey']);
+    return crypto.subtle.unwrapKey('raw', b64.toBytes(record.wrappedKey), kek, { name: 'AES-GCM', iv: b64.toBytes(record.iv) }, { name: 'AES-GCM' }, extractable, ['encrypt', 'decrypt']);
+  },
+
+  /** Neue Sperre: erzeugt Datenschlüssel und verpackt ihn mit der PIN. */
+  async createLock(secret) {
+    const dataKey = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+    const record = await Vault.wrapDataKey(dataKey, secret);
+    // Für die laufende Sitzung eine nicht exportierbare Kopie verwenden
+    const raw = await crypto.subtle.exportKey('raw', dataKey);
+    const sessionKey = await crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+    return { record, sessionKey };
+  },
+
+  async encrypt(text) {
+    if (!Vault.key) throw new Error('Die App ist gesperrt.');
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, Vault.key, textEncoder.encode(text));
+    return { iv: b64.fromBytes(iv), ct: b64.fromBytes(new Uint8Array(ct)) };
+  },
+
+  async decrypt(box) {
+    if (!Vault.key) throw new Error('Die App ist gesperrt.');
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64.toBytes(box.iv) }, Vault.key, b64.toBytes(box.ct));
+    return textDecoder.decode(pt);
+  },
+
+  // Passwortschutz für Sicherungsdateien – unabhängig von der PIN
+  async encryptWithPassword(password, bytes) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const key = await Vault.deriveKey(password, salt, PBKDF2_ITERATIONS, ['encrypt', 'decrypt']);
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, bytes);
+    return { iterations: PBKDF2_ITERATIONS, salt: b64.fromBytes(salt), iv: b64.fromBytes(iv), data: b64.fromBytes(new Uint8Array(ct)) };
+  },
+
+  async decryptWithPassword(password, box) {
+    const key = await Vault.deriveKey(password, b64.toBytes(box.salt), box.iterations, ['encrypt', 'decrypt']);
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64.toBytes(box.iv) }, key, b64.toBytes(box.data));
+    return new Uint8Array(pt);
+  },
+};
+
+/* =============================================================================
+   4. OBERFLÄCHEN-HELFER: Hinweise, Ladeanzeige, Dialoge, Symbole
+   ============================================================================= */
+const ICONS = {
+  overview: '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
+  wealth: '<path d="M3.5 20h17"/><path d="M5 15.5l4.5-4.5 3.5 3 6-6.5"/><path d="M15 7.5h4v4"/>',
+  property: '<path d="M3.5 11L12 4l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/>',
+  scenario: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8"/><path d="M8.5 11.5h0M12 11.5h0M15.5 11.5h0M8.5 15.5h0M12 15.5h0M15.5 15.5h0" stroke-width="2.4"/>',
+  tax: '<path d="M6 3.5h12v17l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3-2 1.3z"/><path d="M9 8h6M9 11.5h6M9 15h3.5"/>',
+  ai: '<path d="M11 3.5l1.9 5.1 5.1 1.9-5.1 1.9L11 17.5l-1.9-5.1L4 10.5l5.1-1.9z"/><path d="M18.5 15.5v5M16 18h5"/>',
+  settings: '<path d="M4 7h9M18 7h2M4 17h3M12 17h8"/><circle cx="15.5" cy="7" r="2.25"/><circle cx="9.5" cy="17" r="2.25"/>',
+  lock: '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
+};
+const icon = (name) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
+
+const LOCK_MARK = '<svg class="lock-mark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="#24434f"/><rect x="15" y="32" width="8" height="16" rx="2.2" fill="#c9d8d1"/><rect x="28" y="25" width="8" height="23" rx="2.2" fill="#c9d8d1"/><rect x="41" y="16" width="8" height="32" rx="2.2" fill="#4cc08a"/></svg>';
+
+const UI = {
+  toastTimer: null,
+
+  toast(message, { error = false } = {}) {
+    const el = $('#toast');
+    el.textContent = message;
+    el.classList.toggle('is-error', error);
+    el.classList.add('show');
+    clearTimeout(UI.toastTimer);
+    UI.toastTimer = setTimeout(() => el.classList.remove('show'), error ? 5000 : 2600);
+  },
+
+  busy(text) {
+    $('#busy').hidden = !text;
+    if (text) $('#busy-text').textContent = text;
+  },
+
+  /**
+   * Dialog mit Formular. Gibt die Formularwerte zurück oder null bei Abbruch.
+   * validate(data) darf async sein und gibt einen Fehlertext oder null zurück.
+   */
+  form({ title, html = '', submitLabel = 'OK', cancelLabel = 'Abbrechen', danger = false, validate = null }) {
+    const dlg = $('#dialog');
+    dlg.innerHTML = `
+      <form class="dialog-form" novalidate>
+        <div class="dialog-body">
+          <h2 class="dialog-title">${esc(title)}</h2>
+          ${html}
+          <p class="form-error" role="alert"></p>
+        </div>
+        <div class="dialog-actions">
+          ${cancelLabel ? `<button type="button" data-dialog-cancel>${esc(cancelLabel)}</button>` : ''}
+          <button type="submit" class="${danger ? 'btn-danger-solid' : 'btn-primary'}">${esc(submitLabel)}</button>
+        </div>
+      </form>`;
+    const form = $('form', dlg);
+    const submit = $('button[type="submit"]', form);
+
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = (value) => {
+        if (done) return;
+        done = true;
+        if (dlg.open) dlg.close();
+        resolve(value);
+      };
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(form));
+        if (validate) {
+          submit.disabled = true;
+          const error = await validate(data, form);
+          submit.disabled = false;
+          if (error) { $('.form-error', form).textContent = error; return; }
+        }
+        finish(data);
+      });
+      $('[data-dialog-cancel]', form)?.addEventListener('click', () => finish(null));
+      dlg.oncancel = (event) => { event.preventDefault(); finish(null); };   // Escape-Taste
+      dlg.showModal();
+      setTimeout(() => $('input:not([type="checkbox"])', form)?.focus(), 60);
+    });
+  },
+
+  async confirm({ title, text, confirmLabel = 'OK', danger = false }) {
+    const result = await UI.form({ title, html: `<p class="dialog-text">${esc(text)}</p>`, submitLabel: confirmLabel, danger });
+    return result !== null;
+  },
+
+  closeDialog() { const dlg = $('#dialog'); if (dlg.open) dlg.close(); },
+};
+
+/* =============================================================================
+   5. SPERRE (PIN oder Passwort)
+   ============================================================================= */
+const Lock = {
+  kind: 'pin',          // 'pin' oder 'password'
+  lastActivity: Date.now(),
+  hiddenAt: null,
+  watching: false,
+
+  async init() {
+    const record = await Settings.get('appLock');
+    if (record) { Lock.kind = record.kind || 'pin'; Lock.renderUnlock(); }
+    else Lock.renderSetup();
+  },
+
+  show(html) {
+    UI.closeDialog();
+    $('#app').hidden = true;
+    const el = $('#lock');
+    el.innerHTML = `<div class="lock-box">${LOCK_MARK}${html}</div>`;
+    el.hidden = false;
+  },
+
+  labels(kind) {
+    return kind === 'pin'
+      ? { name: 'PIN', first: 'PIN, mindestens 6 Ziffern', repeat: 'PIN wiederholen', mode: 'numeric' }
+      : { name: 'Passwort', first: 'Passwort, mindestens 8 Zeichen', repeat: 'Passwort wiederholen', mode: 'text' };
+  },
+
+  validateSecret(kind, secret) {
+    if (kind === 'pin') return /^\d{6,}$/.test(secret) ? null : 'Die PIN braucht mindestens 6 Ziffern.';
+    return secret.length >= 8 ? null : 'Das Passwort braucht mindestens 8 Zeichen.';
+  },
+
+  renderSetup() {
+    Lock.kind = 'pin';
+    const l = Lock.labels('pin');
+    Lock.show(`
+      <h1 class="lock-title">Finanz-Cockpit einrichten</h1>
+      <p class="lock-text">Lege fest, womit du die App entsperrst. Damit wird auch dein Claude-API-Schlüssel verschlüsselt.</p>
+      <div class="segmented" role="group" aria-label="Art der Sperre">
+        <button type="button" data-action="lock-kind" data-kind="pin" aria-pressed="true">PIN</button>
+        <button type="button" data-action="lock-kind" data-kind="password" aria-pressed="false">Passwort</button>
+      </div>
+      <form class="lock-form" data-form="lock-setup" novalidate>
+        <input name="s1" type="password" inputmode="${l.mode}" autocomplete="new-password" placeholder="${l.first}" aria-label="${l.first}">
+        <input name="s2" type="password" inputmode="${l.mode}" autocomplete="new-password" placeholder="${l.repeat}" aria-label="${l.repeat}">
+        <p class="lock-error" role="alert"></p>
+        <button type="submit" class="btn-primary btn-block">PIN festlegen</button>
+      </form>
+      <p class="lock-fine">Vergisst du sie, lässt sich die App nur zurücksetzen. Deine Daten holst du dann aus einer Sicherung zurück.</p>`);
+  },
+
+  setKind(kind) {
+    Lock.kind = kind;
+    const l = Lock.labels(kind);
+    $$('[data-action="lock-kind"]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.kind === kind)));
+    const form = $('[data-form="lock-setup"]');
+    [[form.s1, l.first], [form.s2, l.repeat]].forEach(([input, text]) => {
+      input.setAttribute('inputmode', l.mode);
+      input.placeholder = text;
+      input.setAttribute('aria-label', text);
+      input.value = '';
+    });
+    $('button[type="submit"]', form).textContent = `${l.name} festlegen`;
+    $('.lock-error', form).textContent = '';
+  },
+
+  async submitSetup(form) {
+    const s1 = form.s1.value;
+    const s2 = form.s2.value;
+    const error = Lock.validateSecret(Lock.kind, s1) || (s1 !== s2 ? 'Die Eingaben stimmen nicht überein.' : null);
+    if (error) { $('.lock-error', form).textContent = error; return; }
+    Lock.setFormBusy(form, 'Wird eingerichtet …');
+    try {
+      const { record, sessionKey } = await Vault.createLock(s1);
+      record.kind = Lock.kind;
+      await Settings.set('appLock', record);
+      Vault.key = sessionKey;
+      App.enter();
+    } catch (err) {
+      console.error(err);
+      Lock.setFormBusy(form, null);
+      $('.lock-error', form).textContent = 'Die Sperre ließ sich nicht einrichten.';
+    }
+  },
+
+  renderUnlock() {
+    const l = Lock.labels(Lock.kind);
+    Lock.show(`
+      <h1 class="lock-title">Gesperrt</h1>
+      <form class="lock-form" data-form="lock-unlock" novalidate>
+        <input name="secret" type="password" inputmode="${l.mode}" autocomplete="current-password" placeholder="${l.name}" aria-label="${l.name}">
+        <p class="lock-error" role="alert"></p>
+        <button type="submit" class="btn-primary btn-block">Entsperren</button>
+      </form>
+      <button type="button" class="btn-link" data-action="lock-forgot">${l.name} vergessen?</button>`);
+  },
+
+  async submitUnlock(form) {
+    const secret = form.secret.value;
+    if (!secret) return;
+    const errorEl = $('.lock-error', form);
+    const attempts = await Settings.get('lockAttempts', { count: 0, until: 0 });
+    if (attempts.until > Date.now()) {
+      errorEl.textContent = `Zu viele Fehlversuche. Bitte noch ${Math.ceil((attempts.until - Date.now()) / 1000)} Sekunden warten.`;
+      return;
+    }
+    Lock.setFormBusy(form, 'Wird entsperrt …');
+    try {
+      Vault.key = await Vault.unwrapDataKey(secret, await Settings.get('appLock'));
+      await Settings.set('lockAttempts', { count: 0, until: 0 });
+      App.enter();
+    } catch (_) {
+      // Ab dem 5. Fehlversuch wächst die Wartezeit: 30 s, 60 s, 120 s … bis 15 min
+      const count = attempts.count + 1;
+      const until = count >= 5 ? Date.now() + Math.min(30000 * 2 ** (count - 5), 15 * 60000) : 0;
+      await Settings.set('lockAttempts', { count, until });
+      Lock.setFormBusy(form, null);
+      form.secret.value = '';
+      errorEl.textContent = count >= 5
+        ? `Falsch. Nächster Versuch in ${Math.round((until - Date.now()) / 1000)} Sekunden.`
+        : `Falsch. Noch ${5 - count} Versuche bis zur Wartezeit.`;
+    }
+  },
+
+  setFormBusy(form, text) {
+    const button = $('button[type="submit"]', form);
+    if (!button.dataset.label) button.dataset.label = button.textContent;
+    button.disabled = Boolean(text);
+    button.textContent = text || button.dataset.label;
+    $$('input', form).forEach((i) => { i.disabled = Boolean(text); });
+  },
+
+  async forgot() {
+    const ok = await UI.form({
+      title: 'App zurücksetzen?',
+      html: '<p class="dialog-text">Ohne PIN lässt sich die App nur zurücksetzen. Dabei werden alle Daten auf diesem iPad gelöscht. Danach legst du eine neue PIN fest und spielst in den Einstellungen deine letzte Sicherung ein.</p>',
+      submitLabel: 'Alles löschen',
+      danger: true,
+    });
+    if (ok) await App.wipe();
+  },
+
+  lock() {
+    Vault.key = null;
+    $('#view').innerHTML = '';
+    Lock.renderUnlock();
+  },
+
+  /** Sperrt nach Inaktivität oder wenn die App länger im Hintergrund war. */
+  watch() {
+    if (Lock.watching) return;
+    Lock.watching = true;
+    const bump = () => { Lock.lastActivity = Date.now(); };
+    ['pointerdown', 'keydown', 'wheel'].forEach((ev) => document.addEventListener(ev, bump, { passive: true, capture: true }));
+
+    document.addEventListener('visibilitychange', () => {
+      if (!Vault.key) return;
+      const minutes = App.autoLockMinutes;
+      if (document.hidden) {
+        Lock.hiddenAt = Date.now();
+        if (minutes === 0) Lock.lock();
+      } else if (Lock.hiddenAt && Date.now() - Lock.hiddenAt > minutes * 60000) {
+        Lock.lock();
+      }
+    });
+
+    setInterval(() => {
+      const minutes = App.autoLockMinutes;
+      if (Vault.key && minutes > 0 && Date.now() - Lock.lastActivity > minutes * 60000) Lock.lock();
+    }, 15000);
+  },
+};
+
+/* =============================================================================
+   6. DATENSICHERUNG (Export und Import)
+   Format: eine JSON-Datei mit allen Stores. Dateien (Belege) werden dafür in
+   Base64 umgewandelt und beim Import wieder zu Blobs. PIN und API-Schlüssel
+   bleiben immer auf dem Gerät.
+   ============================================================================= */
+const Backup = {
+  FORMAT: 'finanzcockpit-backup',
+
+  // Platz für spätere Umwandlungen: Sicherung von Schema n auf n+1 anheben
+  UPGRADES: {
+    // 2: (stores) => { ... }
+  },
+
+  status(lastIso, days) {
+    if (!lastIso) return { level: 'never', title: 'Noch keine Sicherung', hint: 'Erstelle die erste Sicherung und speichere sie in der Dateien-App.' };
+    const age = Math.floor((Date.now() - Date.parse(lastIso)) / 86400000);
+    const when = age === 0 ? 'heute' : age === 1 ? 'gestern' : `vor ${age} Tagen`;
+    if (age >= days) return { level: 'due', title: `Letzte Sicherung ${when}`, hint: `Fällig: Du sicherst alle ${days} Tage.` };
+    return { level: 'ok', title: `Letzte Sicherung ${when}`, hint: fmt.dateTime(lastIso) };
+  },
+
+  async serialize(value) {
+    if (value instanceof Blob) {
+      return { __blob: true, type: value.type, data: b64.fromBytes(new Uint8Array(await value.arrayBuffer())) };
+    }
+    if (Array.isArray(value)) return Promise.all(value.map(Backup.serialize));
+    if (value && typeof value === 'object') {
+      const out = {};
+      for (const [k, v] of Object.entries(value)) out[k] = await Backup.serialize(v);
+      return out;
+    }
+    return value;
+  },
+
+  deserialize(value) {
+    if (value && value.__blob === true) return new Blob([b64.toBytes(value.data)], { type: value.type });
+    if (Array.isArray(value)) return value.map(Backup.deserialize);
+    if (value && typeof value === 'object') {
+      const out = {};
+      for (const [k, v] of Object.entries(value)) out[k] = Backup.deserialize(v);
+      return out;
+    }
+    return value;
+  },
+
+  async build() {
+    const names = DB.storeNames();
+    const data = await DB.readAll(names);
+    data.settings = data.settings.filter((s) => !DEVICE_ONLY_SETTINGS.includes(s.key));
+    const stores = {};
+    for (const name of names) stores[name] = await Backup.serialize(data[name]);
+    return { format: Backup.FORMAT, appVersion: APP_VERSION, schemaVersion: DB_VERSION, exportedAt: nowIso(), stores };
+  },
+
+  async create() {
+    const input = await UI.form({
+      title: 'Sicherung erstellen',
+      html: `
+        <p class="dialog-text">Die Datei enthält alle Daten und Belege, aber nie deine PIN und den API-Schlüssel.</p>
+        <label class="check"><input type="checkbox" name="encrypt" checked> Mit Passwort verschlüsseln</label>
+        <div class="field"><label for="bk-pw1">Passwort für die Sicherung</label><input id="bk-pw1" name="pw1" type="password" autocomplete="new-password"></div>
+        <div class="field"><label for="bk-pw2">Passwort wiederholen</label><input id="bk-pw2" name="pw2" type="password" autocomplete="new-password"></div>
+        <p class="dialog-text">Empfohlen, wenn die Datei in iCloud Drive liegt. Ohne dieses Passwort lässt sich die Sicherung nicht öffnen.</p>`,
+      submitLabel: 'Erstellen',
+      validate: (d) => {
+        if (!d.encrypt) return null;
+        if ((d.pw1 || '').length < 8) return 'Das Passwort braucht mindestens 8 Zeichen.';
+        if (d.pw1 !== d.pw2) return 'Die Passwörter stimmen nicht überein.';
+        return null;
+      },
+    });
+    if (!input) return;
+
+    UI.busy('Sicherung wird erstellt …');
+    let file;
+    try {
+      const payload = await Backup.build();
+      let json = JSON.stringify(payload);
+      if (input.encrypt) {
+        const box = await Vault.encryptWithPassword(input.pw1, textEncoder.encode(json));
+        json = JSON.stringify({ format: Backup.FORMAT, encrypted: true, schemaVersion: DB_VERSION, exportedAt: payload.exportedAt, ...box });
+      }
+      file = new File([json], `finanzcockpit-sicherung-${todayIso()}.json`, { type: 'application/json' });
+    } catch (err) {
+      console.error(err);
+      UI.busy(null);
+      UI.toast('Die Sicherung ließ sich nicht erstellen.', { error: true });
+      return;
+    }
+    UI.busy(null);
+    await Backup.offer(file);
+  },
+
+  /** Zweiter Schritt mit eigenem Tippen – das iPad öffnet „Teilen“ nur direkt nach einer Berührung. */
+  async offer(file) {
+    const ok = await UI.form({
+      title: 'Sicherung bereit',
+      html: `<p class="dialog-text">${esc(file.name)}, ${esc(fmt.bytes(file.size))}. Speichere sie über „In Dateien sichern“, am besten in iCloud Drive oder auf einem USB-Stick.</p>`,
+      submitLabel: 'Datei speichern',
+    });
+    if (!ok) return;
+
+    let saved = false;
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: file.name });
+        saved = true;
+      } catch (err) {
+        if (err.name === 'AbortError') { UI.toast('Nicht gespeichert'); return; }
+        saved = Backup.download(file);
+      }
+    } else {
+      saved = Backup.download(file);
+    }
+    if (saved) {
+      await Settings.set('lastBackupAt', nowIso());
+      UI.toast('Sicherung gespeichert');
+      App.renderNav();
+      App.render();
+    }
+  },
+
+  download(file) {
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return true;
+  },
+
+  async restore(file) {
+    let payload;
+    try { payload = JSON.parse(await file.text()); } catch (_) { payload = null; }
+    if (!payload || payload.format !== Backup.FORMAT) {
+      UI.toast('Diese Datei ist keine Finanz-Cockpit-Sicherung.', { error: true });
+      return;
+    }
+
+    if (payload.encrypted) {
+      let plain = null;
+      const ok = await UI.form({
+        title: 'Sicherung entschlüsseln',
+        html: '<div class="field"><label for="rs-pw">Passwort der Sicherung</label><input id="rs-pw" name="pw" type="password" autocomplete="current-password"></div>',
+        submitLabel: 'Entschlüsseln',
+        validate: async (d) => {
+          try { plain = await Vault.decryptWithPassword(d.pw || '', payload); return null; }
+          catch (_) { return 'Das Passwort stimmt nicht.'; }
+        },
+      });
+      if (!ok) return;
+      payload = JSON.parse(textDecoder.decode(plain));
+    }
+
+    if (payload.schemaVersion > DB_VERSION) {
+      UI.toast('Die Sicherung stammt aus einer neueren App-Version. Bitte zuerst die App aktualisieren.', { error: true });
+      return;
+    }
+    for (let v = payload.schemaVersion + 1; v <= DB_VERSION; v++) {
+      if (Backup.UPGRADES[v]) Backup.UPGRADES[v](payload.stores);
+    }
+
+    const confirmed = await UI.confirm({
+      title: 'Sicherung wiederherstellen?',
+      text: `Stand vom ${fmt.dateTime(payload.exportedAt)}. Alle aktuellen Daten auf diesem iPad werden ersetzt. PIN und API-Schlüssel bleiben erhalten.`,
+      confirmLabel: 'Wiederherstellen',
+      danger: true,
+    });
+    if (!confirmed) return;
+
+    UI.busy('Daten werden wiederhergestellt …');
+    try {
+      // Alles vorbereiten, bevor die Schreib-Transaktion beginnt
+      const names = DB.storeNames();
+      const prepared = Object.fromEntries(names.map((n) => [n, (payload.stores[n] || []).map(Backup.deserialize)]));
+      prepared.settings = prepared.settings.filter((s) => !DEVICE_ONLY_SETTINGS.includes(s.key));
+      const keep = (await DB.getAll('settings')).filter((s) => DEVICE_ONLY_SETTINGS.includes(s.key));
+
+      await DB.write(names, (stores) => {
+        names.forEach((n) => stores[n].clear());
+        names.forEach((n) => prepared[n].forEach((record) => stores[n].put(record)));
+        keep.forEach((record) => stores.settings.put(record));
+      });
+      App.autoLockMinutes = await Settings.get('autoLockMinutes', 5);
+      UI.busy(null);
+      UI.toast('Sicherung wiederhergestellt');
+      App.renderNav();
+      App.render();
+    } catch (err) {
+      console.error(err);
+      UI.busy(null);
+      UI.toast('Wiederherstellen fehlgeschlagen. Deine bisherigen Daten sind unverändert.', { error: true });
+    }
+  },
+};
+
+/* =============================================================================
+   7. CLAUDE-API
+   Direktaufruf aus dem Browser. Der spezielle Header schaltet das bei
+   Anthropic frei; der Schlüssel verlässt das iPad nur Richtung api.anthropic.com.
+   ============================================================================= */
+const Claude = {
+  async hasKey() { return Boolean(await Settings.get('anthropicApiKey')); },
+
+  async apiKey() {
+    const box = await Settings.get('anthropicApiKey');
+    return box ? Vault.decrypt(box) : null;
+  },
+
+  async saveKey(key) { await Settings.set('anthropicApiKey', await Vault.encrypt(key)); },
+
+  /**
+   * Sendet eine Anfrage. Gibt { text, usage, model } zurück oder wirft einen
+   * Fehler mit verständlicher Meldung.
+   */
+  async send({ system, messages, maxTokens = 1024 }) {
+    const key = await Claude.apiKey();
+    if (!key) throw new Error('Kein API-Schlüssel hinterlegt.');
+    const model = await Settings.get('aiModel', DEFAULT_MODEL);
+
+    let response;
+    try {
+      response = await fetch(CLAUDE_API_URL, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': CLAUDE_API_VERSION,
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({ model, max_tokens: maxTokens, system, messages }),
+      });
+    } catch (_) {
+      throw new Error('Keine Verbindung zu Claude. Ist das iPad online?');
+    }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(Claude.explain(response.status, data));
+    const text = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('\n');
+    return { text, usage: data.usage, model: data.model };
+  },
+
+  explain(status, data) {
+    const detail = data?.error?.message || '';
+    if (status === 401) return 'Der API-Schlüssel wurde abgelehnt. Bitte prüfen.';
+    if (status === 404 || (status === 400 && /model/i.test(detail))) return 'Dieses Modell gibt es nicht. Bitte den Modellnamen prüfen.';
+    if (status === 429) return 'Anfrage- oder Ausgabenlimit erreicht. Bitte später erneut versuchen.';
+    if (status >= 500) return 'Claude ist gerade nicht erreichbar oder überlastet. Bitte gleich noch einmal versuchen.';
+    return detail ? `Fehler ${status}: ${detail}` : `Fehler ${status}`;
+  },
+
+  test() { return Claude.send({ messages: [{ role: 'user', content: 'Antworte nur mit dem Wort OK.' }], maxTokens: 10 }); },
+};
+
+/* =============================================================================
+   8. SEITEN
+   Jedes Modul ist ein Eintrag in MODULES mit einer render(view)-Funktion.
+   Neue Module: Eintrag ergänzen – Navigation und Übersicht passen sich an.
+   ============================================================================= */
+const Pages = {
+  // ----- Übersicht ---------------------------------------------------------
+  async start(view) {
+    const [lastBackupAt, reminderDays, hasKey] = await Promise.all([
+      Settings.get('lastBackupAt'), Settings.get('backupReminderDays', 14), Claude.hasKey(),
+    ]);
+    const backup = Backup.status(lastBackupAt, reminderDays);
+    const ctx = { hasKey };
+
+    view.innerHTML = `
+      <div class="page">
+        <header class="page-head">
+          <h1 class="page-title">Übersicht</h1>
+          <p class="page-sub">${esc(fmt.longDate())}</p>
+        </header>
+
+        ${isStandalone() ? '' : `
+        <div class="banner">
+          <div>
+            <strong>Zum Home-Bildschirm hinzufügen</strong>
+            <p>Safari und die Home-Bildschirm-App speichern getrennt, und Safari kann Daten nach längerer Pause löschen. Tippe auf Teilen und dann auf „Zum Home-Bildschirm“, und öffne die App nur noch über das Symbol.</p>
+          </div>
+        </div>`}
+
+        <section class="section">
+          <h2 class="section-title">Datensicherung</h2>
+          <div class="group">
+            <div class="row">
+              <div class="row-main">
+                <div class="row-label ${backup.level === 'ok' ? '' : 'is-warn'}">${esc(backup.title)}</div>
+                <div class="row-hint">${esc(backup.hint)}</div>
+              </div>
+              <button type="button" class="${backup.level === 'ok' ? '' : 'btn-primary'}" data-action="backup-create">Jetzt sichern</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2 class="section-title">Bereiche</h2>
+          <div class="ledger">
+            ${MODULES.filter((m) => m.summary).map((m) => `
+              <a class="ledger-row" href="#${m.id}">
+                <span><span class="ledger-name">${esc(m.title)}</span><span class="ledger-hint">${esc(m.summary)}</span></span>
+                <span class="ledger-state">${esc(m.state ? m.state(ctx) : 'Im Aufbau')}</span>
+              </a>`).join('')}
+          </div>
+        </section>
+      </div>`;
+  },
+
+  // ----- Platzhalter für Module, die noch folgen ----------------------------
+  placeholder(lead, items) {
+    return async (view, module) => {
+      const needsKey = module.id === 'ki' && !(await Claude.hasKey());
+      view.innerHTML = `
+        <div class="page">
+          <header class="page-head">
+            <h1 class="page-title">${esc(module.title)}</h1>
+            <p class="page-sub">${esc(lead)}</p>
+          </header>
+          <div class="empty">
+            <p class="empty-title">Dieser Bereich wird im nächsten Bauschritt ergänzt.</p>
+            <ul class="empty-list">${items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>
+            ${needsKey ? '<a class="btn btn-primary" href="#einstellungen">API-Schlüssel eintragen</a>' : ''}
+          </div>
+        </div>`;
+    };
+  },
+
+  // ----- Einstellungen -------------------------------------------------------
+  async settings(view) {
+    const [lock, autoLock, model, lastBackupAt, reminderDays, keyBox] = await Promise.all([
+      Settings.get('appLock'), Settings.get('autoLockMinutes', 5), Settings.get('aiModel', DEFAULT_MODEL),
+      Settings.get('lastBackupAt'), Settings.get('backupReminderDays', 14), Settings.get('anthropicApiKey'),
+    ]);
+
+    let keyHint = 'Nicht hinterlegt';
+    if (keyBox) {
+      try { const k = await Vault.decrypt(keyBox); keyHint = `Hinterlegt, endet auf …${k.slice(-4)}`; }
+      catch (_) { keyHint = 'Hinterlegt, ließ sich aber nicht entschlüsseln. Bitte neu eintragen.'; }
+    }
+
+    let usage = null, quota = null, persisted = false;
+    try {
+      if (navigator.storage?.estimate) ({ usage, quota } = await navigator.storage.estimate());
+      if (navigator.storage?.persisted) persisted = await navigator.storage.persisted();
+    } catch (_) { /* nicht verfügbar */ }
+
+    const backup = Backup.status(lastBackupAt, reminderDays);
+    const lockName = Lock.labels(lock?.kind || 'pin').name;
+    const option = (value, label, current) => `<option value="${esc(value)}" ${String(value) === String(current) ? 'selected' : ''}>${esc(label)}</option>`;
+
+    view.innerHTML = `
+      <div class="page">
+        <header class="page-head"><h1 class="page-title">Einstellungen</h1></header>
+
+        <section class="section">
+          <h2 class="section-title">Sicherheit</h2>
+          <div class="group">
+            <div class="row">
+              <div class="row-main"><div class="row-label">${esc(lockName)}</div><div class="row-hint">Entsperrt die App und verschlüsselt den API-Schlüssel.</div></div>
+              <button type="button" data-action="lock-change">Ändern</button>
+            </div>
+            <div class="row">
+              <div class="row-main"><label class="row-label" for="set-autolock">Automatisch sperren</label></div>
+              <select id="set-autolock" class="compact" data-setting="autoLockMinutes" data-type="number">
+                ${option(0, 'Beim Verlassen der App', autoLock)}${option(1, 'Nach 1 Minute', autoLock)}${option(5, 'Nach 5 Minuten', autoLock)}${option(15, 'Nach 15 Minuten', autoLock)}
+              </select>
+            </div>
+            <div class="row">
+              <div class="row-main"><div class="row-label">Jetzt sperren</div></div>
+              <button type="button" data-action="lock-now">Sperren</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2 class="section-title">Claude-API</h2>
+          <div class="group">
+            <div class="row">
+              <div class="row-main"><div class="row-label">API-Schlüssel</div><div class="row-hint ${keyBox ? 'is-ok' : ''}">${esc(keyHint)}</div></div>
+              ${keyBox ? '<button type="button" class="btn-danger" data-action="api-key-remove">Entfernen</button>' : ''}
+            </div>
+            <form class="row row-form" data-form="api-key" novalidate>
+              <input name="apiKey" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="${keyBox ? 'Neuen Schlüssel einfügen' : 'Schlüssel einfügen (sk-ant-…)'}" aria-label="API-Schlüssel">
+              <button type="submit" class="btn-primary">Speichern</button>
+            </form>
+            <div class="row">
+              <div class="row-main"><label class="row-label" for="set-model">Modell</label><div class="row-hint">Neue Modellnamen kannst du selbst eintragen.</div></div>
+              <input id="set-model" class="compact" data-setting="aiModel" list="model-list" value="${esc(model)}" autocapitalize="off" autocorrect="off" spellcheck="false">
+              <datalist id="model-list">${MODEL_SUGGESTIONS.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join('')}</datalist>
+            </div>
+            <div class="row">
+              <div class="row-main"><div class="row-label">Verbindung testen</div><div class="row-hint" id="api-test-result">Sendet eine sehr kurze Anfrage an Claude.</div></div>
+              <button type="button" data-action="api-test" ${keyBox ? '' : 'disabled'}>Testen</button>
+            </div>
+          </div>
+          <p class="note">Der Schlüssel liegt mit deiner ${esc(lockName)} verschlüsselt auf diesem iPad und wird nur an api.anthropic.com gesendet. Setze in der Anthropic Console ein monatliches Ausgabenlimit.</p>
+        </section>
+
+        <section class="section">
+          <h2 class="section-title">Datensicherung</h2>
+          <div class="group">
+            <div class="row">
+              <div class="row-main"><div class="row-label ${backup.level === 'ok' ? '' : 'is-warn'}">${esc(backup.title)}</div><div class="row-hint">${esc(backup.hint)}</div></div>
+              <button type="button" class="btn-primary" data-action="backup-create">Sicherung erstellen</button>
+            </div>
+            <div class="row">
+              <div class="row-main"><label class="row-label" for="set-reminder">Erinnern nach</label></div>
+              <select id="set-reminder" class="compact" data-setting="backupReminderDays" data-type="number">
+                ${option(7, '7 Tagen', reminderDays)}${option(14, '14 Tagen', reminderDays)}${option(30, '30 Tagen', reminderDays)}
+              </select>
+            </div>
+            <div class="row">
+              <div class="row-main"><div class="row-label">Sicherung wiederherstellen</div><div class="row-hint">Ersetzt alle Daten auf diesem iPad.</div></div>
+              <label class="btn">Datei wählen<input class="file-input" type="file" accept=".json,application/json" data-change="backup-restore"></label>
+            </div>
+          </div>
+          <p class="note">PIN und API-Schlüssel sind nie Teil einer Sicherung. Nach einer Wiederherstellung auf einem anderen Gerät trägst du den Schlüssel dort neu ein.</p>
+        </section>
+
+        <section class="section">
+          <h2 class="section-title">Speicher</h2>
+          <div class="group">
+            <div class="row">
+              <div class="row-main"><div class="row-label">Belegt</div></div>
+              <span class="row-value">${usage != null ? `${esc(fmt.bytes(usage))} von etwa ${esc(fmt.bytes(quota))}` : 'Keine Angabe'}</span>
+            </div>
+            <div class="row">
+              <div class="row-main">
+                <div class="row-label">Dauerhafte Speicherung</div>
+                <div class="row-hint ${persisted ? 'is-ok' : 'is-warn'}">${persisted ? 'Aktiv: Das iPad räumt diese Daten nicht automatisch auf.' : 'Nicht bestätigt. Am zuverlässigsten ist die Nutzung über den Home-Bildschirm.'}</div>
+              </div>
+              ${persisted ? '' : '<button type="button" data-action="storage-persist">Anfordern</button>'}
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2 class="section-title">Über die App</h2>
+          <div class="group">
+            <div class="row"><div class="row-main"><div class="row-label">Version</div></div><span class="row-value">${esc(APP_VERSION)}, Datenbank-Schema ${DB_VERSION}</span></div>
+            <div class="row"><div class="row-main"><div class="row-label">Adresse</div></div><span class="row-value">${esc(location.host + location.pathname)}</span></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2 class="section-title">Zurücksetzen</h2>
+          <div class="group">
+            <div class="row">
+              <div class="row-main"><div class="row-label">Alle Daten löschen</div><div class="row-hint">Löscht Datenbank, Belege, PIN und API-Schlüssel auf diesem iPad.</div></div>
+              <button type="button" class="btn-danger" data-action="wipe">Löschen</button>
+            </div>
+          </div>
+        </section>
+      </div>`;
+  },
+};
+
+const MODULES = [
+  { id: 'start', title: 'Übersicht', icon: 'overview', render: Pages.start },
+  {
+    id: 'vermoegen', title: 'Vermögen', icon: 'wealth',
+    summary: 'ETFs, Aktien und Konten, Gehalt, Fixkosten und Sparrate',
+    render: Pages.placeholder('Dein Depot, deine Konten und was jeden Monat übrig bleibt.', [
+      'DKB-Depot per CSV importieren oder Käufe von Hand erfassen',
+      'Gebühren je Transaktion und laufende Kosten über die TER',
+      'Nettogehalt, Fixkosten und freie Sparrate',
+    ]),
+  },
+  {
+    id: 'immobilien', title: 'Immobilien', icon: 'property',
+    summary: 'Objekte, Kredite, Mieten, AfA, Rendite und Cashflow',
+    render: Pages.placeholder('Jede Immobilie mit Kauf, Finanzierung, Miete und Kosten.', [
+      'Kaufpreis, Nebenkosten, Eigenkapital und Kredite je Objekt',
+      'Mietrendite, Cashflow vor und nach Steuern, Beleihungsauslauf',
+      'AfA nach Fertigstellungsjahr und Bodenanteil',
+    ]),
+  },
+  {
+    id: 'simulation', title: 'Objekt-Rechner', icon: 'scenario',
+    summary: 'Neue Objekte durchrechnen, Schmerzgrenze und Break-even',
+    render: Pages.placeholder('Ein Angebot prüfen, bevor du kaufst.', [
+      'Kaufpreis, erwartete Miete, Renovierung und Zins eingeben',
+      'Wirkung auf deinen Gesamt-Cashflow nach Steuern, sofort berechnet',
+      'Höchster sinnvoller Kaufpreis und Break-even mit Mietsteigerung',
+    ]),
+  },
+  {
+    id: 'steuer', title: 'Steuer & Belege', icon: 'tax',
+    summary: 'Belege, Steuer-Tabelle und EÜR für die Anlage V',
+    render: Pages.placeholder('Belege sammeln und das Steuerjahr je Objekt abschließen.', [
+      'Belege mit der Kamera fotografieren oder als PDF ablegen',
+      'Steuer-Tabelle mit Datum, Kategorie, Betrag und Beleg',
+      'Einnahmen-Überschuss-Rechnung je Objekt als Vorlage für die Anlage V',
+    ]),
+  },
+  {
+    id: 'ki', title: 'KI-Beratung', icon: 'ai',
+    summary: 'Portfolio-Analyse und Vorschläge von Claude',
+    state: (ctx) => (ctx.hasKey ? 'Schlüssel hinterlegt' : 'Schlüssel fehlt'),
+    render: Pages.placeholder('Claude analysiert deine Zahlen und schlägt nächste Schritte vor.', [
+      'Kennzahlen ohne Namen und Adressen an Claude senden',
+      'Klumpenrisiken erkennen und Optionen abwägen: ETF oder nächste Immobilie',
+      'Frühere Analysen und Rückfragen im Verlauf',
+    ]),
+  },
+  { id: 'einstellungen', title: 'Einstellungen', icon: 'settings', render: Pages.settings, footer: true },
+];
+
+/* =============================================================================
+   9. APP: Navigation, Aktionen, Start
+   ============================================================================= */
+const App = {
+  autoLockMinutes: 5,
+
+  async enter() {
+    $('#lock').hidden = true;
+    $('#lock').innerHTML = '';
+    $('#app').hidden = false;
+    App.autoLockMinutes = await Settings.get('autoLockMinutes', 5);
+    Lock.lastActivity = Date.now();
+    Lock.watch();
+    await App.renderNav();
+    await App.render();
+    // Bitte ans iPad: Daten dieser App nicht automatisch aufräumen
+    try { if (navigator.storage?.persist && !(await navigator.storage.persisted())) await navigator.storage.persist(); } catch (_) { /* optional */ }
+  },
+
+  currentModule() {
+    const id = (location.hash || '#start').slice(1);
+    return MODULES.find((m) => m.id === id) || MODULES[0];
+  },
+
+  async renderNav() {
+    const [last, days] = await Promise.all([Settings.get('lastBackupAt'), Settings.get('backupReminderDays', 14)]);
+    const overdue = Backup.status(last, days).level !== 'ok';
+    const item = (m) => `
+      <li><a href="#${m.id}" data-nav="${m.id}">
+        ${icon(m.icon)}<span class="nav-label">${esc(m.title)}</span>
+        ${m.id === 'einstellungen' && overdue ? '<span class="dot" title="Sicherung fällig"></span>' : ''}
+      </a></li>`;
+    $('#nav-main').innerHTML = MODULES.filter((m) => !m.footer).map(item).join('');
+    $('#nav-foot').innerHTML = MODULES.filter((m) => m.footer).map(item).join('')
+      + `<li><button type="button" data-action="lock-now">${icon('lock')}<span class="nav-label">Sperren</span></button></li>`;
+    App.markNav();
+  },
+
+  markNav() {
+    const current = App.currentModule().id;
+    $$('[data-nav]').forEach((a) => {
+      if (a.dataset.nav === current) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+  },
+
+  async render() {
+    if (!Vault.key) return;
+    const module = App.currentModule();
+    const view = $('#view');
+    App.markNav();
+    document.title = `${module.title} – Finanz-Cockpit`;
+    try {
+      await module.render(view, module);
+    } catch (err) {
+      console.error(err);
+      view.innerHTML = `<div class="page"><h1 class="page-title">Fehler</h1><p class="page-sub">Dieser Bereich ließ sich nicht laden: ${esc(err.message)}</p></div>`;
+    }
+    view.scrollTop = 0;
+  },
+
+  async wipe() {
+    UI.busy('Daten werden gelöscht …');
+    try { await DB.destroy(); } catch (err) { console.error(err); }
+    location.hash = '';
+    location.reload();
+  },
+
+  // ----- Aktionen (per data-action an Knöpfen) --------------------------------
+  actions: {
+    'lock-kind': (el) => Lock.setKind(el.dataset.kind),
+    'lock-forgot': () => Lock.forgot(),
+    'lock-now': () => Lock.lock(),
+
+    async 'lock-change'() {
+      const current = await Settings.get('appLock');
+      const curName = Lock.labels(current.kind || 'pin').name;
+      const result = await UI.form({
+        title: `${curName} ändern`,
+        html: `
+          <div class="field"><label for="lc-old">Aktuelle ${esc(curName)}</label><input id="lc-old" name="old" type="password" inputmode="${current.kind === 'password' ? 'text' : 'numeric'}" autocomplete="current-password"></div>
+          <div class="field"><label for="lc-kind">Neue Art</label><select id="lc-kind" name="kind"><option value="pin" ${current.kind !== 'password' ? 'selected' : ''}>PIN, mindestens 6 Ziffern</option><option value="password" ${current.kind === 'password' ? 'selected' : ''}>Passwort, mindestens 8 Zeichen</option></select></div>
+          <div class="field"><label for="lc-new1">Neu</label><input id="lc-new1" name="new1" type="password" autocomplete="new-password"></div>
+          <div class="field"><label for="lc-new2">Neu wiederholen</label><input id="lc-new2" name="new2" type="password" autocomplete="new-password"></div>`,
+        submitLabel: 'Ändern',
+        validate: async (d) => {
+          const error = Lock.validateSecret(d.kind, d.new1 || '') || (d.new1 !== d.new2 ? 'Die neuen Eingaben stimmen nicht überein.' : null);
+          if (error) return error;
+          try {
+            const dataKey = await Vault.unwrapDataKey(d.old || '', current, true);
+            const record = await Vault.wrapDataKey(dataKey, d.new1);
+            record.kind = d.kind;
+            await Settings.set('appLock', record);
+            Lock.kind = d.kind;
+            return null;
+          } catch (_) {
+            return `Die aktuelle ${curName} stimmt nicht.`;
+          }
+        },
+      });
+      if (result) { UI.toast('Geändert'); App.render(); }
+    },
+
+    async 'api-key-remove'() {
+      const ok = await UI.confirm({ title: 'API-Schlüssel entfernen?', text: 'Die KI-Beratung funktioniert erst wieder, wenn du einen Schlüssel einträgst.', confirmLabel: 'Entfernen', danger: true });
+      if (!ok) return;
+      await Settings.remove('anthropicApiKey');
+      UI.toast('Schlüssel entfernt');
+      App.render();
+    },
+
+    async 'api-test'(el) {
+      const out = $('#api-test-result');
+      el.disabled = true;
+      out.className = 'row-hint';
+      out.textContent = 'Anfrage läuft …';
+      try {
+        const result = await Claude.test();
+        out.className = 'row-hint is-ok';
+        out.textContent = `Verbunden mit ${result.model || 'Claude'}. Antwort: ${result.text.trim() || 'leer'}`;
+      } catch (err) {
+        out.className = 'row-hint is-neg';
+        out.textContent = err.message;
+      } finally {
+        el.disabled = false;
+      }
+    },
+
+    'backup-create': () => Backup.create(),
+
+    async 'storage-persist'() {
+      let granted = false;
+      try { granted = await navigator.storage.persist(); } catch (_) { /* nicht verfügbar */ }
+      UI.toast(granted ? 'Dauerhafte Speicherung aktiv' : 'Das iPad hat die Anfrage nicht bestätigt');
+      App.render();
+    },
+
+    async wipe() {
+      const result = await UI.form({
+        title: 'Alle Daten löschen?',
+        html: '<p class="dialog-text">Datenbank, Belege, PIN und API-Schlüssel werden auf diesem iPad gelöscht. Das lässt sich nur mit einer Sicherung rückgängig machen.</p><div class="field"><label for="wp-confirm">Zur Bestätigung LÖSCHEN eintippen</label><input id="wp-confirm" name="confirm" autocapitalize="characters" autocomplete="off"></div>',
+        submitLabel: 'Endgültig löschen',
+        danger: true,
+        validate: (d) => ((d.confirm || '').trim().toUpperCase() === 'LÖSCHEN' ? null : 'Bitte LÖSCHEN eintippen.'),
+      });
+      if (result) await App.wipe();
+    },
+  },
+
+  // ----- Formulare (per data-form) ---------------------------------------------
+  forms: {
+    'lock-setup': (form) => Lock.submitSetup(form),
+    'lock-unlock': (form) => Lock.submitUnlock(form),
+    async 'api-key'(form) {
+      const key = form.apiKey.value.trim();
+      if (!key) { UI.toast('Bitte einen Schlüssel einfügen.', { error: true }); return; }
+      if (!key.startsWith('sk-ant-')) {
+        const ok = await UI.confirm({ title: 'Ungewöhnlicher Schlüssel', text: 'Claude-API-Schlüssel beginnen normalerweise mit „sk-ant-“. Trotzdem speichern?', confirmLabel: 'Speichern' });
+        if (!ok) return;
+      }
+      await Claude.saveKey(key);
+      form.reset();
+      UI.toast('Schlüssel verschlüsselt gespeichert');
+      App.render();
+    },
+  },
+
+  bindEvents() {
+    document.addEventListener('click', (event) => {
+      const el = event.target.closest('[data-action]');
+      if (!el || el.disabled) return;
+      const action = App.actions[el.dataset.action];
+      if (action) { event.preventDefault(); action(el); }
+    });
+
+    document.addEventListener('submit', (event) => {
+      const form = event.target.closest('[data-form]');
+      if (!form) return;
+      event.preventDefault();
+      App.forms[form.dataset.form]?.(form);
+    });
+
+    document.addEventListener('change', async (event) => {
+      const el = event.target;
+      if (el.matches('[data-setting]')) {
+        let value = el.value.trim();
+        if (el.dataset.type === 'number') value = Number(value);
+        if (el.dataset.setting === 'aiModel' && !value) { value = DEFAULT_MODEL; el.value = value; }
+        await Settings.set(el.dataset.setting, value);
+        if (el.dataset.setting === 'autoLockMinutes') App.autoLockMinutes = value;
+        if (el.dataset.setting === 'backupReminderDays') { App.renderNav(); App.render(); }
+        UI.toast('Gespeichert');
+      }
+      if (el.matches('[data-change="backup-restore"]') && el.files?.[0]) {
+        const file = el.files[0];
+        el.value = '';
+        Backup.restore(file);
+      }
+    });
+
+    window.addEventListener('hashchange', () => App.render());
+  },
+};
+
+/* =============================================================================
+   10. START
+   ============================================================================= */
+function fail(message) {
+  document.body.innerHTML = `<main class="fatal"><h1>Finanz-Cockpit</h1><p>${esc(message)}</p></main>`;
+}
+
+async function boot() {
+  if (!window.isSecureContext || !window.crypto?.subtle) {
+    fail('Die App braucht eine sichere Verbindung. Bitte über die https-Adresse öffnen, nicht als Datei aus der Dateien-App.');
+    return;
+  }
+  if (!window.indexedDB) { fail('Dieser Browser bietet keine lokale Datenbank.'); return; }
+
+  try { await DB.open(); }
+  catch (err) { fail(`Die Datenbank ließ sich nicht öffnen: ${err.message}`); return; }
+
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('./sw.js').catch((err) => console.warn('Offline-Modus nicht verfügbar:', err));
+  }
+
+  App.bindEvents();
+  await Lock.init();
+}
+
+boot();
+})();
+</script>
+</body>
+</html>
